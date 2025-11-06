@@ -13,6 +13,9 @@ dist/
 build/
 *.log
 
+# Prisma
+generated/
+
 # Environment variables
 .env
 .env.local

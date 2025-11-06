@@ -1,23 +1,47 @@
 {
   "compilerOptions": {
+    /* Language and Environment */
     "target": "ES2022",
-    "module": "ESNext",
     "lib": ["ES2022"],
-    "moduleResolution": "node",
-    "rootDir": ".",
-    "outDir": "./dist",
-    "strict": true,
+    "module": "Node16",
+    "moduleResolution": "node16",
     "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
+    "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
-    "declaration": true,
-    "declarationMap": true,
+
+    /* Output */
+    "outDir": "./dist",
+    "rootDir": ".",
     "sourceMap": true,
-    "allowSyntheticDefaultImports": true
+    "removeComments": true,
+
+    /* Strictness */
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+
+    /* Type Definitions */
+    "types": ["node"],
+    "typeRoots": ["./node_modules/@types"],
+
+    /* Path Mapping */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@/generated/*": ["generated/*"]
+    },
+
+    /* Emit */
+    "noEmitOnError": true,
+    "declaration": true,
+    "declarationMap": true
   },
-  "include": ["src/**/*", "tests/**/*", "**/*.test.ts", "**/*.spec.ts"],
-  "exclude": ["node_modules", "dist", "coverage", ".husky"]
+  "include": ["src/**/*.ts", "generated/**/*.ts", "tests/**/*", "**/*.test.ts", "**/*.spec.ts"],
+  "exclude": ["node_modules", "dist", "coverage", ".husky"],
+  "ts-node": {
+    "esm": true,
+    "transpileOnly": true
+  }
 }
