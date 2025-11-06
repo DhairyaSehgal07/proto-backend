@@ -1,0 +1,14 @@
+{
+  "name": "Coldop-backend",
+  "version": "0.1.0",
+  "description": "Production backend for Coldop (Fastify + Prisma + TypeScript)",
+  "main": "src/server.ts",
+  "type":"module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Dhairya Sehgal",
+  "license": "MIT",
+  "packageManager": "pnpm@10.18.3"
+}
