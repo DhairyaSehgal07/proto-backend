@@ -1,9 +1,21 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+### 0.1.1 (2025-11-06)
+
+### ### Changed
+
+- Initialise project ([b4fb572](https://github.com/DhairyaSehgal07/ColdOp-backend/commit/b4fb572eeef7a76dc5c6dcd0e896c9f3c07da942))
+- setup development tooling and configuration ([838c65e](https://github.com/DhairyaSehgal07/ColdOp-backend/commit/838c65ee59e2e07243e5e06a2ceb5d8d88bc1a6c))
+
+### ### Fixed
+
+- resolve ESLint errors and configure strict type checking rules ([c27449c](https://github.com/DhairyaSehgal07/ColdOp-backend/commit/c27449ce5d425c312858c3e45e6f7f22b710d1f9))
+
+### ### Added
+
+- **schema:** define Prisma schema with core data models ([e9382d2](https://github.com/DhairyaSehgal07/ColdOp-backend/commit/e9382d2a11546eea765790a731bbadc51c034b25))
 
 ## [0.1.0] - 2024-XX-XX
 
