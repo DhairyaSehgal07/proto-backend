@@ -43,7 +43,6 @@ Instructions for running and using your project.
 Describe the available endpoints, including their methods, paths, and expected inputs/outputs.
 
 - **GET /api/example**
-
   - Description: Example endpoint
   - Query Parameters: None
   - Response: JSON object
