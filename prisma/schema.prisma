@@ -7,15 +7,314 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "mongodb"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
 }
 
-// Basic schema - update as needed
-model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String?
+// -------------------- ENUMS --------------------
+
+enum Plan {
+  Basic
+  Pro
+  Enterprise
+}
+
+enum Role {
+  Admin
+  Manager
+  Assistant
+}
+
+enum GatePassType {
+  RECEIPT
+  DELIVERY
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  INACTIVE
+  EXPIRED
+}
+enum Commodity {
+  POTATO
+  ONION
+  GARLIC
+  TOMATO
+  CARROT
+  APPLE
+  SWEETS
+  OTHER
+}
+
+// -------------------- MODELS --------------------
+
+model Subscription {
+  id             String       @id @default(auto()) @map("_id") @db.ObjectId
+  coldStorageId  String       @unique @db.ObjectId
+  coldStorage    ColdStorage  @relation(fields: [coldStorageId], references: [id], onDelete: Cascade)
+
+  plan           Plan         @default(Basic)
+  status         SubscriptionStatus @default(TRIALING)
+  isTrial        Boolean      @default(true)
+
+  trialStart     DateTime?    @default(now())
+  trialEnd       DateTime?
+  billingStart   DateTime?
+  billingEnd     DateTime?
+
+  paymentId      String?      // Stripe/Razorpay ref
+  renewedAt      DateTime?
+  cancelledAt    DateTime?
+
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([plan])
+  @@index([status])
+  @@index([trialEnd])
+}
+
+
+// ❄️ Cold Storage
+model ColdStorage {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  address      String
+  mobileNumber String
+  capacity     Float
+  imageUrl     String?
+  isPaid       Boolean  @default(false)
+  isActive     Boolean  @default(true)
+  plan         Plan     @default(Basic)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  preferences     Preferences?
+  admins          StoreAdmin[]
+  locations       Location[]
+  links           FarmerStorageLink[]
+  rolePermissions RolePermission[]
+  incomingOrders  IncomingOrder[]
+  outgoingOrders  OutgoingOrder[]
+  subscription    Subscription?
+
+  @@index([mobileNumber])
+  @@index([createdAt])
+}
+
+// 🧩 Preferences (Embedded)
+type Preferences {
+  bagSizes    String[]
+  commodities String[]
+  generation  String?
+  rouging     String?
+  tuberType   String?
+  grader      String?
+}
+
+// 👤 Store Admin (super-admin, store-admin, sub-admin)
+model StoreAdmin {
+  id            String      @id @default(auto()) @map("_id") @db.ObjectId
+  coldStorageId String      @db.ObjectId
+  coldStorage   ColdStorage @relation(fields: [coldStorageId], references: [id], onDelete: NoAction)
+
+  name            String
+  personalAddress String?
+  mobileNumber    String
+  password        String
+  role            Role    @default(Manager)
+  isVerified      Boolean @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // Relations
+  linkedLinks    FarmerStorageLink[] @relation("LinkedByAdmin")
+  createdOrders  OutgoingOrder[]     @relation("CreatedByAdmin")
+  approvedOrders OutgoingOrder[]     @relation("ApprovedByAdmin")
+  createdRoles   RolePermission[]    @relation("CreatedByRoleAdmin")
+
+  @@unique([coldStorageId, mobileNumber]) // Avoid duplicates within same tenant
+  @@index([mobileNumber])
+}
+
+// 🌾 Farmer
+model Farmer {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  address      String
+  mobileNumber String   @unique
+  imageUrl     String?
+  password     String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  links FarmerStorageLink[]
+
+  @@index([name]) // For searching
+}
+
+// 🔗 Farmer–Cold Storage Link
+model FarmerStorageLink {
+  id            String  @id @default(auto()) @map("_id") @db.ObjectId
+  farmerId      String  @db.ObjectId
+  coldStorageId String  @db.ObjectId
+  linkedById    String? @db.ObjectId
+
+  farmer      Farmer      @relation(fields: [farmerId], references: [id], onDelete: NoAction)
+  coldStorage ColdStorage @relation(fields: [coldStorageId], references: [id], onDelete: NoAction)
+  linkedBy    StoreAdmin? @relation("LinkedByAdmin", fields: [linkedById], references: [id], onDelete: NoAction)
+
+  accountNumber String
+  isActive      Boolean  @default(true)
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  incomingOrders IncomingOrder[]
+  outgoingOrders OutgoingOrder[]
+
+  @@unique([farmerId, coldStorageId])
+  @@unique([coldStorageId, accountNumber]) // Ensure accountNumber uniqueness
+  @@index([farmerId])
+  @@index([coldStorageId])
+  @@index([createdAt])
+}
+
+// 📦 Location
+model Location {
+  id            String      @id @default(auto()) @map("_id") @db.ObjectId
+  coldStorageId String      @db.ObjectId
+  coldStorage   ColdStorage @relation(fields: [coldStorageId], references: [id], onDelete: NoAction)
+
+  floor   String
+  row     String
+  chamber String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([coldStorageId, floor, row, chamber])
+}
+
+// 📥 Incoming Order
+model IncomingOrder {
+  id                  String            @id @default(auto()) @map("_id") @db.ObjectId
+  farmerStorageLinkId String            @db.ObjectId
+  farmerStorageLink   FarmerStorageLink @relation(fields: [farmerStorageLinkId], references: [id], onDelete: NoAction)
+
+  coldStorageId String?      @db.ObjectId
+  coldStorage   ColdStorage? @relation(fields: [coldStorageId], references: [id], onDelete: NoAction)
+
+  commodity              Commodity
+  gatePassType           GatePassType @default(RECEIPT)
+  gatePassNumber         Int
+  remarks                String?
+  currentStockAtThatTime Float?
+  varieties              Variety[] // Can be empty array for null vouchers (paper tampering simulation)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Unique gatePassNumber scoped to coldStorageId (prevents collision across cold storages)
+  @@unique([coldStorageId,commodity, gatePassNumber])
+  @@index([farmerStorageLinkId])
+  @@index([coldStorageId])
+  @@index([createdAt])
+}
+
+// 🌾 Variety (Embedded in IncomingOrder)
+type Variety {
+  name     String
+  bagSizes BagSize[]
+}
+
+// 🧱 Bag Size (Embedded)
+// NOTE: Embedded types cannot have Prisma model relations.
+// If you need a Prisma-managed relation to Location, make BagSize a model instead of a type.
+type BagSize {
+  name         String
+  quantityInit Float
+  quantityCurr Float
+  approxWeight Float?
+  locationId   String @db.ObjectId
+}
+
+// 📤 Outgoing Order
+model OutgoingOrder {
+  id                  String            @id @default(auto()) @map("_id") @db.ObjectId
+  farmerStorageLinkId String            @db.ObjectId
+  farmerStorageLink   FarmerStorageLink @relation(fields: [farmerStorageLinkId], references: [id], onDelete: NoAction)
+
+  commodity              Commodity
+  gatePassType           GatePassType @default(DELIVERY)
+  gatePassNumber         Int
+  remarks                String?
+  currentStockAtThatTime Float?
+
+  varieties   VarietySnapshot[] // Can be empty array for null vouchers (paper tampering simulation)
+  totalBags   Int?              @default(0)
+  totalWeight Float?            @default(0)
+
+  createdById  String?     @db.ObjectId
+  approvedById String?     @db.ObjectId
+  createdBy    StoreAdmin? @relation("CreatedByAdmin", fields: [createdById], references: [id], onDelete: NoAction)
+  approvedBy   StoreAdmin? @relation("ApprovedByAdmin", fields: [approvedById], references: [id], onDelete: NoAction)
+
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  coldStorage   ColdStorage? @relation(fields: [coldStorageId], references: [id], onDelete: NoAction)
+  coldStorageId String?      @db.ObjectId
+
+  // Unique gatePassNumber scoped to coldStorageId
+  @@unique([coldStorageId, commodity , gatePassNumber])
+  @@index([farmerStorageLinkId])
+  @@index([coldStorageId])
+  @@index([gatePassNumber])
+  @@index([createdAt])
+}
+
+// 🧾 Variety Snapshot (Embedded)
+type VarietySnapshot {
+  name     String
+  bagSizes BagSizeSnapshot[]
+}
+
+// 📦 Bag Size Snapshot (Embedded)
+type BagSizeSnapshot {
+  name            String
+  locationId      String @db.ObjectId
+  incomingOrderId String @db.ObjectId
+  varietyName     String
+  quantityBefore  Float
+  quantityRemoved Float
+  quantityAfter   Float
+  approxWeight    Float?
+}
+
+// 🔐 Role Permission
+model RolePermission {
+  id            String      @id @default(auto()) @map("_id") @db.ObjectId
+  coldStorageId String      @db.ObjectId
+  coldStorage   ColdStorage @relation(fields: [coldStorageId], references: [id], onDelete: NoAction)
+
+  role        Role
+  permissions ResourcePermission[]
+  createdById String               @db.ObjectId
+  createdBy   StoreAdmin           @relation("CreatedByRoleAdmin", fields: [createdById], references: [id], onDelete: NoAction)
+  isActive    Boolean              @default(true)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  @@unique([coldStorageId, role])
+  @@index([coldStorageId])
+  @@index([createdAt])
+}
+
+// 📜 Resource Permission (Embedded)
+type ResourcePermission {
+  resource   String
+  operations String[]
 }
