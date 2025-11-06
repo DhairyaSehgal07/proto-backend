@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.2](https://github.com/DhairyaSehgal07/ColdOp-backend/compare/v0.1.1...v0.1.2) (2025-11-06)
+
+### ### Added
+
+- add cold storage CRUD API with validation and error handling ([bf8e29a](https://github.com/DhairyaSehgal07/ColdOp-backend/commit/bf8e29a533026822ea668dc9973c7b6683a6b47e))
+
 ### 0.1.1 (2025-11-06)
 
 ### ### Changed
