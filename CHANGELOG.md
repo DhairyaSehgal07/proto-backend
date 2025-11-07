@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.2.0](https://github.com/DhairyaSehgal07/ColdOp-backend/compare/v0.1.2...v0.2.0) (2025-11-07)
+
+### ### Added
+
+- add farmer registration endpoint and RBAC module ([d40b887](https://github.com/DhairyaSehgal07/ColdOp-backend/commit/d40b8871c2aa22eb2a9e9f4ac640044baed3ff32))
+- add password hashing with bcryptjs for store-admin ([acf8f7e](https://github.com/DhairyaSehgal07/ColdOp-backend/commit/acf8f7e14793b83e0d19d07a747c705049172d7b))
+- convert Preferences to model and add StoreAdmin CRUD ([3268e79](https://github.com/DhairyaSehgal07/ColdOp-backend/commit/3268e796d7b7a3efe503ef8d45629464dff6f93e))
+
 ### [0.1.2](https://github.com/DhairyaSehgal07/ColdOp-backend/compare/v0.1.1...v0.1.2) (2025-11-06)
 
 ### ### Added
