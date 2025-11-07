@@ -175,7 +175,7 @@ model FarmerStorageLink {
   coldStorage ColdStorage @relation(fields: [coldStorageId], references: [id], onDelete: NoAction)
   linkedBy    StoreAdmin? @relation("LinkedByAdmin", fields: [linkedById], references: [id], onDelete: NoAction)
 
-  accountNumber String
+  accountNumber Int
   isActive      Boolean  @default(true)
   notes         String?
   createdAt     DateTime @default(now())

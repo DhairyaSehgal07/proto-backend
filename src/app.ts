@@ -1,10 +1,12 @@
 // app.ts
 import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
+import jwt from '@fastify/jwt';
 import prismaPlugin from './plugins/prisma.js';
 import { config } from 'dotenv';
 import coldStorageRoutes from '@/modules/base/cold-storage/v1/routes/cold-storage.routes.js';
 import storeAdminRoutes from './modules/base/store-admin/v1/routes/store-admin.routes.js';
+import rbacRoutes from './modules/base/rbac/v1/routes/rbac.routes.js';
 config();
 
 export const buildApp = async (): Promise<FastifyInstance> => {
@@ -32,8 +34,16 @@ export const buildApp = async (): Promise<FastifyInstance> => {
 
   // Register Prisma plugin
   await fastify.register(prismaPlugin);
+
+  // Register JWT plugin
+  await fastify.register(jwt, {
+    secret: process.env.AUTH_SECRET || 'your-secret-key-change-in-production',
+  });
+
+  // Register routes
   await fastify.register(coldStorageRoutes, { prefix: '/api/v1/base/cold-storage' });
   await fastify.register(storeAdminRoutes, { prefix: '/api/v1/base/store-admin' });
+  await fastify.register(rbacRoutes, { prefix: '/api/v1/base/rbac' });
 
   // Health check endpoint
   fastify.get('/health', () => ({

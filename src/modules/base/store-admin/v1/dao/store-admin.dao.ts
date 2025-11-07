@@ -140,4 +140,24 @@ export class StoreAdminDAO {
       throw error;
     }
   }
+
+  /**
+   * Find store admin by mobile number
+   * Note: Mobile number is unique per cold storage, but may exist across multiple cold storages
+   */
+  async findByMobileNumber(mobileNumber: string): Promise<StoreAdminWithRelations | null> {
+    try {
+      return await this.fastify.prisma.storeAdmin.findFirst({
+        where: {
+          mobileNumber,
+        },
+        include: {
+          coldStorage: true,
+        },
+      });
+    } catch (error) {
+      this.fastify.log.error(error, `Error in findByMobileNumber: ${mobileNumber}`);
+      throw error;
+    }
+  }
 }

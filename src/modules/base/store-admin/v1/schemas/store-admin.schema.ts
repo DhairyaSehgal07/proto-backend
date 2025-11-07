@@ -41,9 +41,35 @@ export const storeAdminQuerySchema = z.object({
 });
 
 /**
+ * LOGIN schema
+ */
+export const loginStoreAdminSchema = z.object({
+  mobileNumber: z.string().regex(/^[0-9]{10}$/, 'Mobile number must be 10 digits'),
+  password: z.string().min(1, 'Password is required'),
+});
+
+/**
+ * REGISTER FARMER schema
+ */
+export const registerFarmerSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters long'),
+  address: z.string().min(5, 'Address must be at least 5 characters long'),
+  mobileNumber: z.string().regex(/^[0-9]{10}$/, 'Mobile number must be 10 digits'),
+  imageUrl: z.union([z.string().url('Invalid image URL'), z.literal('')]).optional(),
+  accountNumber: z.coerce
+    .number('Account number must be a number')
+    .int('Account number must be an integer')
+    .positive('Account number must be positive')
+    .min(1, 'Account number must be at least 1'),
+  notes: z.string().optional(),
+});
+
+/**
  * Type Inference (for controller/service layers)
  */
 export type CreateStoreAdminInput = z.infer<typeof createStoreAdminSchema>;
 export type UpdateStoreAdminInput = z.infer<typeof updateStoreAdminSchema>;
 export type StoreAdminIdParam = z.infer<typeof storeAdminIdParamSchema>;
 export type StoreAdminQuery = z.infer<typeof storeAdminQuerySchema>;
+export type LoginStoreAdminInput = z.infer<typeof loginStoreAdminSchema>;
+export type RegisterFarmerInput = z.infer<typeof registerFarmerSchema>;

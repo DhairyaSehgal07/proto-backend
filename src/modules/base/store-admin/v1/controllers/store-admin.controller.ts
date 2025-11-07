@@ -5,16 +5,27 @@ import {
   StoreAdminValidationError,
 } from '../services/store-admin.service.js';
 
-import type { CreateStoreAdminRequest, UpdateStoreAdminRequest } from '../types/store-admin.js';
+import type {
+  CreateStoreAdminRequest,
+  UpdateStoreAdminRequest,
+  LoginStoreAdminRequest,
+  RegisterFarmerRequest,
+} from '../types/store-admin.js';
 
 import type {
   StoreAdminIdParam,
   StoreAdminQuery,
   CreateStoreAdminInput,
   UpdateStoreAdminInput,
+  LoginStoreAdminInput,
+  RegisterFarmerInput,
 } from '../schemas/store-admin.schema.js';
 
 // Route-level types
+interface LoginStoreAdminRequestParams {
+  Body: LoginStoreAdminInput;
+}
+
 interface CreateStoreAdminRequestParams {
   Body: CreateStoreAdminInput;
 }
@@ -36,6 +47,10 @@ interface ListStoreAdminRequestParams {
   Querystring: StoreAdminQuery;
 }
 
+interface RegisterFarmerRequestParams {
+  Body: RegisterFarmerInput;
+}
+
 /**
  * Controller for StoreAdmin endpoints
  */
@@ -44,6 +59,29 @@ export class StoreAdminController {
 
   constructor(fastify: FastifyInstance) {
     this.service = new StoreAdminService(fastify);
+  }
+
+  /**
+   * POST /store-admin/login - Login store admin
+   */
+  async login(
+    request: FastifyRequest<LoginStoreAdminRequestParams>,
+    reply: FastifyReply
+  ): Promise<void> {
+    try {
+      const result = await this.service.login(
+        request.body as LoginStoreAdminRequest,
+        request.server
+      );
+
+      reply.code(200).send({
+        success: true,
+        message: 'Login successful',
+        data: result,
+      });
+    } catch (error) {
+      this.handleError(error, reply);
+    }
   }
 
   /**
@@ -159,6 +197,52 @@ export class StoreAdminController {
       reply.code(200).send({
         success: true,
         message: 'Store admin deleted successfully',
+      });
+    } catch (error) {
+      this.handleError(error, reply);
+    }
+  }
+
+  /**
+   * POST /store-admin/register-farmer - Register a farmer and link to cold storage
+   */
+  async registerFarmer(
+    request: FastifyRequest<RegisterFarmerRequestParams>,
+    reply: FastifyReply
+  ): Promise<void> {
+    try {
+      if (!request.admin) {
+        reply.code(401).send({
+          success: false,
+          error: {
+            code: 'AUTHENTICATION_REQUIRED',
+            message: 'Authentication required',
+          },
+        });
+        return;
+      }
+
+      if (!request.admin.coldStorage) {
+        reply.code(400).send({
+          success: false,
+          error: {
+            code: 'MISSING_COLD_STORAGE',
+            message: 'Missing cold storage context',
+          },
+        });
+        return;
+      }
+
+      const result = await this.service.registerFarmer(
+        request.body as RegisterFarmerRequest,
+        request.admin.id,
+        request.admin.coldStorageId
+      );
+
+      reply.code(201).send({
+        success: true,
+        message: 'Farmer successfully linked to this cold storage',
+        data: result,
       });
     } catch (error) {
       this.handleError(error, reply);

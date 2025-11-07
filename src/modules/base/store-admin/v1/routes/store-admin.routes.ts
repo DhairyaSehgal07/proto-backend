@@ -6,15 +6,24 @@ import {
   updateStoreAdminSchema,
   storeAdminIdParamSchema,
   storeAdminQuerySchema,
+  loginStoreAdminSchema,
+  registerFarmerSchema,
   CreateStoreAdminInput,
   UpdateStoreAdminInput,
   StoreAdminIdParam,
   StoreAdminQuery,
+  LoginStoreAdminInput,
+  RegisterFarmerInput,
 } from '../schemas/store-admin.schema.js';
+import { authenticateAdmin } from '@/core/middleware/auth.middleware.js';
 
 /**
  * Request/Response types for route handlers
  */
+interface LoginStoreAdminRequestParams {
+  Body: LoginStoreAdminInput;
+}
+
 interface ListStoreAdminRequestParams {
   Querystring: StoreAdminQuery;
 }
@@ -36,12 +45,72 @@ interface DeleteStoreAdminRequestParams {
   Params: StoreAdminIdParam;
 }
 
+interface RegisterFarmerRequestParams {
+  Body: RegisterFarmerInput;
+}
+
 /**
  * Body validator factory (for create/update)
  */
 function createBodyValidator(
   schema: typeof createStoreAdminSchema | typeof updateStoreAdminSchema
 ) {
+  return async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+    try {
+      const validated = schema.parse(request.body);
+      request.body = validated;
+    } catch (error) {
+      if (error instanceof ZodError) {
+        reply.code(400).send({
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Request validation failed',
+            details: error.issues.map((e) => ({
+              path: e.path.join('.'),
+              message: e.message,
+            })),
+          },
+        });
+        return;
+      }
+      throw error;
+    }
+  };
+}
+
+/**
+ * Login body validator
+ */
+function createLoginBodyValidator(schema: typeof loginStoreAdminSchema) {
+  return async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+    try {
+      const validated = schema.parse(request.body);
+      request.body = validated;
+    } catch (error) {
+      if (error instanceof ZodError) {
+        reply.code(400).send({
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Request validation failed',
+            details: error.issues.map((e) => ({
+              path: e.path.join('.'),
+              message: e.message,
+            })),
+          },
+        });
+        return;
+      }
+      throw error;
+    }
+  };
+}
+
+/**
+ * Register farmer body validator
+ */
+function createRegisterFarmerBodyValidator(schema: typeof registerFarmerSchema) {
   return async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
     try {
       const validated = schema.parse(request.body);
@@ -128,6 +197,40 @@ function validateQuery(request: FastifyRequest, reply: FastifyReply): void {
  */
 function storeAdminRoutes(fastify: FastifyInstance, _options: FastifyPluginOptions): void {
   const controller = new StoreAdminController(fastify);
+
+  /**
+   * POST /api/v1/store-admin/login
+   * Login store admin
+   */
+  fastify.post(
+    '/login',
+    {
+      preHandler: [createLoginBodyValidator(loginStoreAdminSchema)],
+      schema: {
+        description: 'Login store admin',
+        tags: ['store-admin'],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              message: { type: 'string' },
+              data: {
+                type: 'object',
+                properties: {
+                  admin: { type: 'object' },
+                  token: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      await controller.login(request as FastifyRequest<LoginStoreAdminRequestParams>, reply);
+    }
+  );
 
   /**
    * GET /api/v1/store-admin
@@ -391,6 +494,93 @@ function storeAdminRoutes(fastify: FastifyInstance, _options: FastifyPluginOptio
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       await controller.delete(request as FastifyRequest<DeleteStoreAdminRequestParams>, reply);
+    }
+  );
+
+  /**
+   * POST /api/v1/store-admin/register-farmer
+   * Register a farmer and link to cold storage
+   */
+  fastify.post(
+    '/register-farmer',
+    {
+      preHandler: [authenticateAdmin, createRegisterFarmerBodyValidator(registerFarmerSchema)],
+      schema: {
+        description: 'Register a farmer and link to cold storage',
+        tags: ['store-admin'],
+        response: {
+          201: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              message: { type: 'string' },
+              data: {
+                type: 'object',
+                properties: {
+                  farmer: {
+                    type: 'object',
+                    properties: {
+                      id: { type: 'string' },
+                      name: { type: 'string' },
+                      address: { type: 'string' },
+                      mobileNumber: { type: 'string' },
+                      imageUrl: { type: 'string', nullable: true },
+                      createdAt: { type: 'string', format: 'date-time' },
+                      updatedAt: { type: 'string', format: 'date-time' },
+                    },
+                  },
+                  link: {
+                    type: 'object',
+                    properties: {
+                      id: { type: 'string' },
+                      farmerId: { type: 'string' },
+                      coldStorageId: { type: 'string' },
+                      linkedById: { type: 'string', nullable: true },
+                      accountNumber: { type: 'number' },
+                      isActive: { type: 'boolean' },
+                      notes: { type: 'string', nullable: true },
+                      createdAt: { type: 'string', format: 'date-time' },
+                      updatedAt: { type: 'string', format: 'date-time' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              error: {
+                type: 'object',
+                properties: {
+                  code: { type: 'string' },
+                  message: { type: 'string' },
+                },
+              },
+            },
+          },
+          401: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              error: {
+                type: 'object',
+                properties: {
+                  code: { type: 'string' },
+                  message: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      await controller.registerFarmer(
+        request as FastifyRequest<RegisterFarmerRequestParams>,
+        reply
+      );
     }
   );
 }
