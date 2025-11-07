@@ -60,12 +60,17 @@ export class ColdStorageDAO {
    */
   async findById(id: string): Promise<ColdStorageWithPreferences | null> {
     try {
-      return await this.fastify.prisma.coldStorage.findUnique({
+      this.fastify.log.info(`Finding cold storage with id: ${id}`);
+      const result = await this.fastify.prisma.coldStorage.findUnique({
         where: { id },
         include: {
           preferences: true,
         },
       });
+      this.fastify.log.info(
+        `Cold storage query completed for id: ${id}, found: ${result ? 'yes' : 'no'}`
+      );
+      return result;
     } catch (error) {
       this.fastify.log.error(error, `Error in findById cold storage: ${id}`);
       throw error;

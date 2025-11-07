@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import bcrypt from 'bcryptjs';
 import { StoreAdminDAO } from '../dao/store-admin.dao.js';
 import type {
   CreateStoreAdminRequest,
@@ -154,12 +155,15 @@ export class StoreAdminService {
       throw new StoreAdminValidationError('Cold storage not found');
     }
 
+    // Hash the password before storing
+    const hashedPassword = await bcrypt.hash(data.password, 10);
+
     const storeAdmin = await this.dao.create({
       coldStorageId: data.coldStorageId,
       name: data.name.trim(),
       personalAddress: data.personalAddress?.trim() ?? null,
       mobileNumber: data.mobileNumber.trim(),
-      password: data.password,
+      password: hashedPassword,
       role: data.role ?? 'Manager',
       isVerified: data.isVerified ?? false,
     });
@@ -215,16 +219,23 @@ export class StoreAdminService {
       throw new StoreAdminValidationError('Password must be at least 6 characters long');
     }
 
-    const storeAdmin = await this.dao.update(id, {
+    // Hash the password if provided
+    const updateData: UpdateStoreAdminRequest = {
       ...(data.name !== undefined && { name: data.name.trim() }),
       ...(data.personalAddress !== undefined && {
         personalAddress: data.personalAddress?.trim() ?? null,
       }),
       ...(data.mobileNumber !== undefined && { mobileNumber: data.mobileNumber.trim() }),
-      ...(data.password !== undefined && { password: data.password }),
       ...(data.role !== undefined && { role: data.role }),
       ...(data.isVerified !== undefined && { isVerified: data.isVerified }),
-    });
+    };
+
+    // Hash password if provided
+    if (data.password !== undefined) {
+      updateData.password = await bcrypt.hash(data.password, 10);
+    }
+
+    const storeAdmin = await this.dao.update(id, updateData);
 
     return this.mapToResponse(storeAdmin);
   }

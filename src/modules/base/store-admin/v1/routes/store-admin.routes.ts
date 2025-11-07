@@ -69,10 +69,15 @@ function createBodyValidator(
 /**
  * Params validator (/api/v1/store-admin/:id)
  */
-function validateParams(request: FastifyRequest, reply: FastifyReply): void {
+function validateParams(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  done: (err?: Error) => void
+): void {
   try {
     const validated = storeAdminIdParamSchema.parse(request.params);
     request.params = validated;
+    done();
   } catch (error) {
     if (error instanceof ZodError) {
       reply.code(400).send({

@@ -67,7 +67,7 @@ export class ColdStorageController {
         plan,
       });
 
-      reply.code(200).send({
+      await reply.code(200).send({
         success: true,
         data: result.data,
         meta: {
@@ -78,7 +78,7 @@ export class ColdStorageController {
         },
       });
     } catch (error) {
-      this.handleError(error, reply);
+      await this.handleError(error, reply);
     }
   }
 
@@ -91,14 +91,16 @@ export class ColdStorageController {
   ): Promise<void> {
     try {
       const { id } = request.params;
+      request.log.info(`Controller: Getting cold storage with id: ${id}`);
       const storage = await this.service.getById(id);
+      request.log.info(`Controller: Cold storage retrieved successfully for id: ${id}`);
 
-      reply.code(200).send({
+      await reply.code(200).send({
         success: true,
         data: storage,
       });
     } catch (error) {
-      this.handleError(error, reply);
+      await this.handleError(error, reply);
     }
   }
 
@@ -112,15 +114,13 @@ export class ColdStorageController {
     try {
       const storage = await this.service.create(request.body as CreateColdStorageRequest);
 
-      console.log('storage is: ', storage);
-
-      reply.code(201).send({
+      await reply.code(201).send({
         success: true,
         data: storage,
         message: 'Cold storage created successfully',
       });
     } catch (error) {
-      this.handleError(error, reply);
+      await this.handleError(error, reply);
     }
   }
 
@@ -135,13 +135,13 @@ export class ColdStorageController {
       const { id } = request.params;
       const updated = await this.service.update(id, request.body as UpdateColdStorageRequest);
 
-      reply.code(200).send({
+      await reply.code(200).send({
         success: true,
         data: updated,
         message: 'Cold storage updated successfully',
       });
     } catch (error) {
-      this.handleError(error, reply);
+      await this.handleError(error, reply);
     }
   }
 
@@ -156,23 +156,23 @@ export class ColdStorageController {
       const { id } = request.params;
       await this.service.delete(id);
 
-      reply.code(200).send({
+      await reply.code(200).send({
         success: true,
         message: 'Cold storage deleted successfully',
       });
     } catch (error) {
-      this.handleError(error, reply);
+      await this.handleError(error, reply);
     }
   }
 
   /**
    * Centralized error handler
    */
-  private handleError(error: unknown, reply: FastifyReply): void {
+  private async handleError(error: unknown, reply: FastifyReply): Promise<void> {
     if (error instanceof Error) reply.log.error(error);
 
     if (error instanceof ColdStorageNotFoundError) {
-      reply.code(404).send({
+      await reply.code(404).send({
         success: false,
         error: { code: 'NOT_FOUND', message: error.message },
       });
@@ -180,7 +180,7 @@ export class ColdStorageController {
     }
 
     if (error instanceof ColdStorageValidationError) {
-      reply.code(400).send({
+      await reply.code(400).send({
         success: false,
         error: { code: 'VALIDATION_ERROR', message: error.message },
       });
@@ -190,14 +190,14 @@ export class ColdStorageController {
     if (error && typeof error === 'object' && 'code' in error) {
       const prismaError = error as { code: string; message: string };
       if (prismaError.code === 'P2025') {
-        reply.code(404).send({
+        await reply.code(404).send({
           success: false,
           error: { code: 'NOT_FOUND', message: 'Cold storage not found' },
         });
         return;
       }
       if (prismaError.code === 'P2002') {
-        reply.code(409).send({
+        await reply.code(409).send({
           success: false,
           error: { code: 'DUPLICATE_ENTRY', message: 'Duplicate entry' },
         });
@@ -205,7 +205,7 @@ export class ColdStorageController {
       }
     }
 
-    reply.code(500).send({
+    await reply.code(500).send({
       success: false,
       error: {
         code: 'INTERNAL_SERVER_ERROR',

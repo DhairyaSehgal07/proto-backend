@@ -69,10 +69,15 @@ function createBodyValidator(
 /**
  * Pre-handler to validate route parameters with Zod
  */
-function validateParams(request: FastifyRequest, reply: FastifyReply): void {
+function validateParams(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  done: (err?: Error) => void
+): void {
   try {
     const validated = coldStorageIdParamSchema.parse(request.params);
     request.params = validated;
+    done();
   } catch (error) {
     if (error instanceof ZodError) {
       reply.code(400).send({
@@ -216,6 +221,18 @@ function coldStorageRoutes(fastify: FastifyInstance, _options: FastifyPluginOpti
                   mobileNumber: { type: 'string' },
                   capacity: { type: 'number' },
                   imageUrl: { type: 'string', nullable: true },
+                  preferences: {
+                    type: 'object',
+                    nullable: true,
+                    properties: {
+                      bagSizes: { type: 'array', items: { type: 'string' } },
+                      commodities: { type: 'array', items: { type: 'string' } },
+                      generation: { type: 'string', nullable: true },
+                      rouging: { type: 'string', nullable: true },
+                      tuberType: { type: 'string', nullable: true },
+                      grader: { type: 'string', nullable: true },
+                    },
+                  },
                   isPaid: { type: 'boolean' },
                   isActive: { type: 'boolean' },
                   plan: { type: 'string' },
@@ -339,6 +356,18 @@ function coldStorageRoutes(fastify: FastifyInstance, _options: FastifyPluginOpti
                   mobileNumber: { type: 'string' },
                   capacity: { type: 'number' },
                   imageUrl: { type: 'string', nullable: true },
+                  preferences: {
+                    type: 'object',
+                    nullable: true,
+                    properties: {
+                      bagSizes: { type: 'array', items: { type: 'string' } },
+                      commodities: { type: 'array', items: { type: 'string' } },
+                      generation: { type: 'string', nullable: true },
+                      rouging: { type: 'string', nullable: true },
+                      tuberType: { type: 'string', nullable: true },
+                      grader: { type: 'string', nullable: true },
+                    },
+                  },
                   isPaid: { type: 'boolean' },
                   isActive: { type: 'boolean' },
                   plan: { type: 'string' },
