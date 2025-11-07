@@ -1,46 +1,46 @@
 import type { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } from 'fastify';
 import { ZodError } from 'zod';
-import { ColdStorageController } from '../controllers/cold-storage.controller.js';
+import { StoreAdminController } from '../controllers/store-admin.controller.js';
 import {
-  createColdStorageSchema,
-  updateColdStorageSchema,
-  coldStorageIdParamSchema,
-  coldStorageQuerySchema,
-  CreateColdStorageInput,
-  UpdateColdStorageInput,
-  ColdStorageIdParam,
-  ColdStorageQuery,
-} from '../schemas/cold-storage-schema.js';
+  createStoreAdminSchema,
+  updateStoreAdminSchema,
+  storeAdminIdParamSchema,
+  storeAdminQuerySchema,
+  CreateStoreAdminInput,
+  UpdateStoreAdminInput,
+  StoreAdminIdParam,
+  StoreAdminQuery,
+} from '../schemas/store-admin.schema.js';
 
 /**
  * Request/Response types for route handlers
  */
-interface ListColdStorageRequestParams {
-  Querystring: ColdStorageQuery;
+interface ListStoreAdminRequestParams {
+  Querystring: StoreAdminQuery;
 }
 
-interface GetColdStorageRequestParams {
-  Params: ColdStorageIdParam;
+interface GetStoreAdminRequestParams {
+  Params: StoreAdminIdParam;
 }
 
-interface CreateColdStorageRequestParams {
-  Body: CreateColdStorageInput;
+interface CreateStoreAdminRequestParams {
+  Body: CreateStoreAdminInput;
 }
 
-interface UpdateColdStorageRequestParams {
-  Params: ColdStorageIdParam;
-  Body: UpdateColdStorageInput;
+interface UpdateStoreAdminRequestParams {
+  Params: StoreAdminIdParam;
+  Body: UpdateStoreAdminInput;
 }
 
-interface DeleteColdStorageRequestParams {
-  Params: ColdStorageIdParam;
+interface DeleteStoreAdminRequestParams {
+  Params: StoreAdminIdParam;
 }
 
 /**
- * Pre-handler factory to validate request body with Zod
+ * Body validator factory (for create/update)
  */
 function createBodyValidator(
-  schema: typeof createColdStorageSchema | typeof updateColdStorageSchema
+  schema: typeof createStoreAdminSchema | typeof updateStoreAdminSchema
 ) {
   return async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
     try {
@@ -67,11 +67,11 @@ function createBodyValidator(
 }
 
 /**
- * Pre-handler to validate route parameters with Zod
+ * Params validator (/api/v1/store-admin/:id)
  */
 function validateParams(request: FastifyRequest, reply: FastifyReply): void {
   try {
-    const validated = coldStorageIdParamSchema.parse(request.params);
+    const validated = storeAdminIdParamSchema.parse(request.params);
     request.params = validated;
   } catch (error) {
     if (error instanceof ZodError) {
@@ -93,11 +93,11 @@ function validateParams(request: FastifyRequest, reply: FastifyReply): void {
 }
 
 /**
- * Pre-handler to validate query parameters with Zod
+ * Query validator (for list/search)
  */
 function validateQuery(request: FastifyRequest, reply: FastifyReply): void {
   try {
-    const validated = coldStorageQuerySchema.parse(request.query);
+    const validated = storeAdminQuerySchema.parse(request.query);
     request.query = validated;
   } catch (error) {
     if (error instanceof ZodError) {
@@ -119,23 +119,22 @@ function validateQuery(request: FastifyRequest, reply: FastifyReply): void {
 }
 
 /**
- * Fastify route plugin for Cold Storage API
- * Registers all CRUD routes with validation
+ * Fastify route plugin for StoreAdmin API
  */
-function coldStorageRoutes(fastify: FastifyInstance, _options: FastifyPluginOptions): void {
-  const controller = new ColdStorageController(fastify);
+function storeAdminRoutes(fastify: FastifyInstance, _options: FastifyPluginOptions): void {
+  const controller = new StoreAdminController(fastify);
 
   /**
-   * GET /api/v1/cold-storage
-   * Get all cold storages with pagination and search
+   * GET /api/v1/store-admin
+   * Get all store admins
    */
   fastify.get(
     '/',
     {
       preHandler: [validateQuery],
       schema: {
-        description: 'Get all cold storages with pagination and optional search',
-        tags: ['cold-storage'],
+        description: 'Get all store admins with pagination and search',
+        tags: ['store-admin'],
         response: {
           200: {
             type: 'object',
@@ -148,25 +147,11 @@ function coldStorageRoutes(fastify: FastifyInstance, _options: FastifyPluginOpti
                   properties: {
                     id: { type: 'string' },
                     name: { type: 'string' },
-                    address: { type: 'string' },
+                    personalAddress: { type: 'string', nullable: true },
                     mobileNumber: { type: 'string' },
-                    capacity: { type: 'number' },
-                    imageUrl: { type: 'string', nullable: true },
-                    isPaid: { type: 'boolean' },
-                    isActive: { type: 'boolean' },
-                    plan: { type: 'string' },
-                    preferences: {
-                      type: 'object',
-                      nullable: true,
-                      properties: {
-                        bagSizes: { type: 'array', items: { type: 'string' } },
-                        commodities: { type: 'array', items: { type: 'string' } },
-                        generation: { type: 'string', nullable: true },
-                        rouging: { type: 'string', nullable: true },
-                        tuberType: { type: 'string', nullable: true },
-                        grader: { type: 'string', nullable: true },
-                      },
-                    },
+                    role: { type: 'string' },
+                    isVerified: { type: 'boolean' },
+                    coldStorageId: { type: 'string' },
                     createdAt: { type: 'string', format: 'date-time' },
                     updatedAt: { type: 'string', format: 'date-time' },
                   },
@@ -187,21 +172,21 @@ function coldStorageRoutes(fastify: FastifyInstance, _options: FastifyPluginOpti
       },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      await controller.getAll(request as FastifyRequest<ListColdStorageRequestParams>, reply);
+      await controller.getAll(request as FastifyRequest<ListStoreAdminRequestParams>, reply);
     }
   );
 
   /**
-   * GET /api/v1/cold-storage/:id
-   * Get a single cold storage by ID
+   * GET /api/v1/store-admin/:id
+   * Get a single store admin
    */
   fastify.get(
     '/:id',
     {
       preHandler: [validateParams],
       schema: {
-        description: 'Get a single cold storage by ID',
-        tags: ['cold-storage'],
+        description: 'Get a single store admin by ID',
+        tags: ['store-admin'],
         response: {
           200: {
             type: 'object',
@@ -212,13 +197,11 @@ function coldStorageRoutes(fastify: FastifyInstance, _options: FastifyPluginOpti
                 properties: {
                   id: { type: 'string' },
                   name: { type: 'string' },
-                  address: { type: 'string' },
+                  personalAddress: { type: 'string', nullable: true },
                   mobileNumber: { type: 'string' },
-                  capacity: { type: 'number' },
-                  imageUrl: { type: 'string', nullable: true },
-                  isPaid: { type: 'boolean' },
-                  isActive: { type: 'boolean' },
-                  plan: { type: 'string' },
+                  role: { type: 'string' },
+                  isVerified: { type: 'boolean' },
+                  coldStorageId: { type: 'string' },
                   createdAt: { type: 'string', format: 'date-time' },
                   updatedAt: { type: 'string', format: 'date-time' },
                 },
@@ -242,55 +225,40 @@ function coldStorageRoutes(fastify: FastifyInstance, _options: FastifyPluginOpti
       },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      await controller.getById(request as FastifyRequest<GetColdStorageRequestParams>, reply);
+      await controller.getById(request as FastifyRequest<GetStoreAdminRequestParams>, reply);
     }
   );
 
   /**
-   * POST /api/v1/cold-storage
-   * Create a new cold storage
+   * POST /api/v1/store-admin
+   * Create a new store admin
    */
   fastify.post(
     '/',
     {
-      preHandler: [createBodyValidator(createColdStorageSchema)],
+      preHandler: [createBodyValidator(createStoreAdminSchema)],
       schema: {
-        description: 'Create a new cold storage',
-        tags: ['cold-storage'],
+        description: 'Create a new store admin',
+        tags: ['store-admin'],
         response: {
           201: {
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              message: { type: 'string' },
               data: {
                 type: 'object',
                 properties: {
                   id: { type: 'string' },
                   name: { type: 'string' },
-                  address: { type: 'string' },
+                  personalAddress: { type: 'string', nullable: true },
                   mobileNumber: { type: 'string' },
-                  capacity: { type: 'number' },
-                  imageUrl: { type: 'string', nullable: true },
-                  preferences: {
-                    type: 'object',
-                    nullable: true,
-                    properties: {
-                      bagSizes: { type: 'array', items: { type: 'string' } },
-                      commodities: { type: 'array', items: { type: 'string' } },
-                      generation: { type: 'string', nullable: true },
-                      rouging: { type: 'string', nullable: true },
-                      tuberType: { type: 'string', nullable: true },
-                      grader: { type: 'string', nullable: true },
-                    },
-                  },
-                  isPaid: { type: 'boolean' },
-                  isActive: { type: 'boolean' },
-                  plan: { type: 'string' },
+                  role: { type: 'string' },
+                  isVerified: { type: 'boolean' },
+                  coldStorageId: { type: 'string' },
                   createdAt: { type: 'string', format: 'date-time' },
-                  updatedAt: { type: 'string', format: 'date-time' },
                 },
               },
-              message: { type: 'string' },
             },
           },
           400: {
@@ -310,21 +278,21 @@ function coldStorageRoutes(fastify: FastifyInstance, _options: FastifyPluginOpti
       },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      await controller.create(request as FastifyRequest<CreateColdStorageRequestParams>, reply);
+      await controller.create(request as FastifyRequest<CreateStoreAdminRequestParams>, reply);
     }
   );
 
   /**
-   * PUT /api/v1/cold-storage/:id
-   * Update an existing cold storage
+   * PUT /api/v1/store-admin/:id
+   * Update an existing store admin
    */
   fastify.put(
     '/:id',
     {
-      preHandler: [validateParams, createBodyValidator(updateColdStorageSchema)],
+      preHandler: [validateParams, createBodyValidator(updateStoreAdminSchema)],
       schema: {
-        description: 'Update an existing cold storage',
-        tags: ['cold-storage'],
+        description: 'Update an existing store admin',
+        tags: ['store-admin'],
         response: {
           200: {
             type: 'object',
@@ -335,13 +303,11 @@ function coldStorageRoutes(fastify: FastifyInstance, _options: FastifyPluginOpti
                 properties: {
                   id: { type: 'string' },
                   name: { type: 'string' },
-                  address: { type: 'string' },
+                  personalAddress: { type: 'string', nullable: true },
                   mobileNumber: { type: 'string' },
-                  capacity: { type: 'number' },
-                  imageUrl: { type: 'string', nullable: true },
-                  isPaid: { type: 'boolean' },
-                  isActive: { type: 'boolean' },
-                  plan: { type: 'string' },
+                  role: { type: 'string' },
+                  isVerified: { type: 'boolean' },
+                  coldStorageId: { type: 'string' },
                   createdAt: { type: 'string', format: 'date-time' },
                   updatedAt: { type: 'string', format: 'date-time' },
                 },
@@ -379,21 +345,21 @@ function coldStorageRoutes(fastify: FastifyInstance, _options: FastifyPluginOpti
       },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      await controller.update(request as FastifyRequest<UpdateColdStorageRequestParams>, reply);
+      await controller.update(request as FastifyRequest<UpdateStoreAdminRequestParams>, reply);
     }
   );
 
   /**
-   * DELETE /api/v1/cold-storage/:id
-   * Delete a cold storage by ID
+   * DELETE /api/v1/store-admin/:id
+   * Delete a store admin
    */
   fastify.delete(
     '/:id',
     {
       preHandler: [validateParams],
       schema: {
-        description: 'Delete a cold storage by ID',
-        tags: ['cold-storage'],
+        description: 'Delete a store admin by ID',
+        tags: ['store-admin'],
         response: {
           200: {
             type: 'object',
@@ -419,9 +385,9 @@ function coldStorageRoutes(fastify: FastifyInstance, _options: FastifyPluginOpti
       },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      await controller.delete(request as FastifyRequest<DeleteColdStorageRequestParams>, reply);
+      await controller.delete(request as FastifyRequest<DeleteStoreAdminRequestParams>, reply);
     }
   );
 }
 
-export default coldStorageRoutes;
+export default storeAdminRoutes;

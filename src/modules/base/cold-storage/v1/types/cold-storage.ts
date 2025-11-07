@@ -6,6 +6,18 @@ import type { ColdStorageModel } from '../../../../../../generated/prisma/models
 export type ColdStorage = ColdStorageModel;
 
 /**
+ * Preferences type for API responses (excludes internal fields)
+ */
+export interface Preferences {
+  bagSizes: string[];
+  commodities: string[];
+  generation: string | null;
+  rouging: string | null;
+  tuberType: string | null;
+  grader: string | null;
+}
+
+/**
  * Request type for creating a cold storage
  */
 export interface CreateColdStorageRequest {
@@ -17,6 +29,7 @@ export interface CreateColdStorageRequest {
   isPaid?: boolean;
   isActive?: boolean;
   plan?: 'Basic' | 'Pro' | 'Enterprise';
+  preferences?: Preferences | null;
 }
 
 /**
@@ -31,6 +44,7 @@ export interface UpdateColdStorageRequest {
   isPaid?: boolean;
   isActive?: boolean;
   plan?: 'Basic' | 'Pro' | 'Enterprise';
+  preferences?: Preferences | null;
 }
 
 /**
@@ -46,6 +60,7 @@ export interface ColdStorageResponse {
   isPaid: boolean;
   isActive: boolean;
   plan: 'Basic' | 'Pro' | 'Enterprise';
+  preferences: Preferences | null;
   createdAt: Date;
   updatedAt: Date;
 }

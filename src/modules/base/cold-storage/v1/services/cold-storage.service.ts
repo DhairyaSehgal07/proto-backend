@@ -5,8 +5,9 @@ import type {
   UpdateColdStorageRequest,
   ColdStorageResponse,
   ColdStorageListResponse,
+  Preferences,
 } from '../types/cold-storage.js';
-import { Prisma } from '../../../../../../generated/prisma/client.js';
+import { Prisma, type Prisma as PrismaTypes } from '../../../../../../generated/prisma/client.js';
 
 /**
  * Custom error classes for business logic
@@ -142,6 +143,7 @@ export class ColdStorageService {
       isPaid: data.isPaid ?? false,
       isActive: data.isActive ?? true,
       plan: data.plan ?? 'Basic',
+      preferences: data.preferences,
     });
 
     return this.mapToResponse(coldStorage);
@@ -208,6 +210,7 @@ export class ColdStorageService {
       ...(data.isPaid !== undefined && { isPaid: data.isPaid }),
       ...(data.isActive !== undefined && { isActive: data.isActive }),
       ...(data.plan !== undefined && { plan: data.plan }),
+      ...(data.preferences !== undefined && { preferences: data.preferences }),
     });
 
     return this.mapToResponse(coldStorage);
@@ -229,20 +232,25 @@ export class ColdStorageService {
   /**
    * Map database model to response DTO
    */
-  private mapToResponse(coldStorage: {
-    id: string;
-    name: string;
-    address: string;
-    mobileNumber: string;
-    capacity: number;
-    imageUrl: string | null;
-    isPaid: boolean;
-    isActive: boolean;
-    plan: 'Basic' | 'Pro' | 'Enterprise';
-    createdAt: Date;
-    updatedAt: Date;
-  }): ColdStorageResponse {
-    return {
+  private mapToResponse(
+    coldStorage: PrismaTypes.ColdStorageGetPayload<{
+      include: { preferences: true };
+    }>
+  ): ColdStorageResponse {
+    // Map preferences, excluding internal fields (id, createdAt, updatedAt)
+    // Always include preferences field, even if null
+    const preferences: Preferences | null = coldStorage.preferences
+      ? {
+          bagSizes: coldStorage.preferences.bagSizes ?? [],
+          commodities: coldStorage.preferences.commodities ?? [],
+          generation: coldStorage.preferences.generation ?? null,
+          rouging: coldStorage.preferences.rouging ?? null,
+          tuberType: coldStorage.preferences.tuberType ?? null,
+          grader: coldStorage.preferences.grader ?? null,
+        }
+      : null;
+
+    const response: ColdStorageResponse = {
       id: coldStorage.id,
       name: coldStorage.name,
       address: coldStorage.address,
@@ -252,8 +260,11 @@ export class ColdStorageService {
       isPaid: coldStorage.isPaid,
       isActive: coldStorage.isActive,
       plan: coldStorage.plan,
+      preferences, // Explicitly include preferences field
       createdAt: coldStorage.createdAt,
       updatedAt: coldStorage.updatedAt,
     };
+
+    return response;
   }
 }

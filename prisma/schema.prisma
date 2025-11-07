@@ -91,10 +91,11 @@ model ColdStorage {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  preferences     Preferences?
-  admins          StoreAdmin[]
-  locations       Location[]
-  links           FarmerStorageLink[]
+  preferencesId String?      @unique @db.ObjectId
+  preferences   Preferences? @relation(fields: [preferencesId], references: [id], onDelete: Cascade)
+  admins         StoreAdmin[]
+  locations      Location[]
+  links          FarmerStorageLink[]
   rolePermissions RolePermission[]
   incomingOrders  IncomingOrder[]
   outgoingOrders  OutgoingOrder[]
@@ -104,14 +105,21 @@ model ColdStorage {
   @@index([createdAt])
 }
 
-// 🧩 Preferences (Embedded)
-type Preferences {
-  bagSizes    String[]
-  commodities String[]
+// 🧩 Preferences
+model Preferences {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  bagSizes    String[] @default([])
+  commodities String[] @default([])
   generation  String?
   rouging     String?
   tuberType   String?
   grader      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  coldStorage ColdStorage?
+
+  @@index([createdAt])
 }
 
 // 👤 Store Admin (super-admin, store-admin, sub-admin)

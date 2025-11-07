@@ -6,6 +6,21 @@ import { z } from 'zod';
 export const PlanEnum = z.enum(['Basic', 'Pro', 'Enterprise']);
 
 /**
+ * Preferences schema
+ */
+export const preferencesSchema = z
+  .object({
+    bagSizes: z.array(z.string()).default([]),
+    commodities: z.array(z.string()).default([]),
+    generation: z.string().nullable().optional(),
+    rouging: z.string().nullable().optional(),
+    tuberType: z.string().nullable().optional(),
+    grader: z.string().nullable().optional(),
+  })
+  .optional()
+  .nullable();
+
+/**
  * CREATE schema
  */
 export const createColdStorageSchema = z.object({
@@ -17,6 +32,7 @@ export const createColdStorageSchema = z.object({
   isPaid: z.boolean().optional().default(false),
   isActive: z.boolean().optional().default(true),
   plan: PlanEnum.optional().default('Basic'),
+  preferences: preferencesSchema,
 });
 
 /**

@@ -1,70 +1,72 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import {
-  ColdStorageService,
-  ColdStorageNotFoundError,
-  ColdStorageValidationError,
-} from '../services/cold-storage.service.js';
+  StoreAdminService,
+  StoreAdminNotFoundError,
+  StoreAdminValidationError,
+} from '../services/store-admin.service.js';
 
-import type { CreateColdStorageRequest, UpdateColdStorageRequest } from '../types/cold-storage.js';
+import type { CreateStoreAdminRequest, UpdateStoreAdminRequest } from '../types/store-admin.js';
 
 import type {
-  ColdStorageIdParam,
-  ColdStorageQuery,
-  CreateColdStorageInput,
-  UpdateColdStorageInput,
-} from '../schemas/cold-storage-schema.js';
+  StoreAdminIdParam,
+  StoreAdminQuery,
+  CreateStoreAdminInput,
+  UpdateStoreAdminInput,
+} from '../schemas/store-admin.schema.js';
 
 // Route-level types
-interface CreateColdStorageRequestParams {
-  Body: CreateColdStorageInput;
+interface CreateStoreAdminRequestParams {
+  Body: CreateStoreAdminInput;
 }
 
-interface UpdateColdStorageRequestParams {
-  Params: ColdStorageIdParam;
-  Body: UpdateColdStorageInput;
+interface UpdateStoreAdminRequestParams {
+  Params: StoreAdminIdParam;
+  Body: UpdateStoreAdminInput;
 }
 
-interface GetColdStorageRequestParams {
-  Params: ColdStorageIdParam;
+interface GetStoreAdminRequestParams {
+  Params: StoreAdminIdParam;
 }
 
-interface DeleteColdStorageRequestParams {
-  Params: ColdStorageIdParam;
+interface DeleteStoreAdminRequestParams {
+  Params: StoreAdminIdParam;
 }
 
-interface ListColdStorageRequestParams {
-  Querystring: ColdStorageQuery;
+interface ListStoreAdminRequestParams {
+  Querystring: StoreAdminQuery;
 }
 
 /**
- * Controller for ColdStorage endpoints
+ * Controller for StoreAdmin endpoints
  */
-export class ColdStorageController {
-  private readonly service: ColdStorageService;
+export class StoreAdminController {
+  private readonly service: StoreAdminService;
 
   constructor(fastify: FastifyInstance) {
-    this.service = new ColdStorageService(fastify);
+    this.service = new StoreAdminService(fastify);
   }
 
   /**
-   * GET /cold-storage - List all cold storages (with pagination & search)
+   * GET /store-admin - List all store admins (with pagination & search)
    */
   async getAll(
-    request: FastifyRequest<ListColdStorageRequestParams>,
+    request: FastifyRequest<ListStoreAdminRequestParams>,
     reply: FastifyReply
   ): Promise<void> {
     try {
-      const { page, limit, search, isActive, plan } = request.query;
+      const { page, limit, search, coldStorageId, role, isVerified } = request.query;
 
-      // Convert isActive string to boolean if provided
-      const isActiveBool = isActive === 'true' ? true : isActive === 'false' ? false : undefined;
+      // Convert isVerified string to boolean if provided
+      const isVerifiedBool =
+        isVerified === 'true' ? true : isVerified === 'false' ? false : undefined;
 
       const result = await this.service.getAll({
         page,
         limit,
         search,
-        isActive: isActiveBool,
-        plan,
+        coldStorageId,
+        role,
+        isVerified: isVerifiedBool,
       });
 
       reply.code(200).send({
@@ -83,19 +85,19 @@ export class ColdStorageController {
   }
 
   /**
-   * GET /cold-storage/:id - Get one cold storage
+   * GET /store-admin/:id - Get one store admin
    */
   async getById(
-    request: FastifyRequest<GetColdStorageRequestParams>,
+    request: FastifyRequest<GetStoreAdminRequestParams>,
     reply: FastifyReply
   ): Promise<void> {
     try {
       const { id } = request.params;
-      const storage = await this.service.getById(id);
+      const storeAdmin = await this.service.getById(id);
 
       reply.code(200).send({
         success: true,
-        data: storage,
+        data: storeAdmin,
       });
     } catch (error) {
       this.handleError(error, reply);
@@ -103,21 +105,19 @@ export class ColdStorageController {
   }
 
   /**
-   * POST /cold-storage - Create new cold storage
+   * POST /store-admin - Create new store admin
    */
   async create(
-    request: FastifyRequest<CreateColdStorageRequestParams>,
+    request: FastifyRequest<CreateStoreAdminRequestParams>,
     reply: FastifyReply
   ): Promise<void> {
     try {
-      const storage = await this.service.create(request.body as CreateColdStorageRequest);
-
-      console.log('storage is: ', storage);
+      const storeAdmin = await this.service.create(request.body as CreateStoreAdminRequest);
 
       reply.code(201).send({
         success: true,
-        data: storage,
-        message: 'Cold storage created successfully',
+        data: storeAdmin,
+        message: 'Store admin created successfully',
       });
     } catch (error) {
       this.handleError(error, reply);
@@ -125,20 +125,20 @@ export class ColdStorageController {
   }
 
   /**
-   * PUT /cold-storage/:id - Update existing cold storage
+   * PUT /store-admin/:id - Update existing store admin
    */
   async update(
-    request: FastifyRequest<UpdateColdStorageRequestParams>,
+    request: FastifyRequest<UpdateStoreAdminRequestParams>,
     reply: FastifyReply
   ): Promise<void> {
     try {
       const { id } = request.params;
-      const updated = await this.service.update(id, request.body as UpdateColdStorageRequest);
+      const updated = await this.service.update(id, request.body as UpdateStoreAdminRequest);
 
       reply.code(200).send({
         success: true,
         data: updated,
-        message: 'Cold storage updated successfully',
+        message: 'Store admin updated successfully',
       });
     } catch (error) {
       this.handleError(error, reply);
@@ -146,10 +146,10 @@ export class ColdStorageController {
   }
 
   /**
-   * DELETE /cold-storage/:id - Delete cold storage
+   * DELETE /store-admin/:id - Delete store admin
    */
   async delete(
-    request: FastifyRequest<DeleteColdStorageRequestParams>,
+    request: FastifyRequest<DeleteStoreAdminRequestParams>,
     reply: FastifyReply
   ): Promise<void> {
     try {
@@ -158,7 +158,7 @@ export class ColdStorageController {
 
       reply.code(200).send({
         success: true,
-        message: 'Cold storage deleted successfully',
+        message: 'Store admin deleted successfully',
       });
     } catch (error) {
       this.handleError(error, reply);
@@ -171,7 +171,7 @@ export class ColdStorageController {
   private handleError(error: unknown, reply: FastifyReply): void {
     if (error instanceof Error) reply.log.error(error);
 
-    if (error instanceof ColdStorageNotFoundError) {
+    if (error instanceof StoreAdminNotFoundError) {
       reply.code(404).send({
         success: false,
         error: { code: 'NOT_FOUND', message: error.message },
@@ -179,7 +179,7 @@ export class ColdStorageController {
       return;
     }
 
-    if (error instanceof ColdStorageValidationError) {
+    if (error instanceof StoreAdminValidationError) {
       reply.code(400).send({
         success: false,
         error: { code: 'VALIDATION_ERROR', message: error.message },
@@ -192,7 +192,7 @@ export class ColdStorageController {
       if (prismaError.code === 'P2025') {
         reply.code(404).send({
           success: false,
-          error: { code: 'NOT_FOUND', message: 'Cold storage not found' },
+          error: { code: 'NOT_FOUND', message: 'Store admin not found' },
         });
         return;
       }

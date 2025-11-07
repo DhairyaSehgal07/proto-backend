@@ -1,10 +1,13 @@
 import type { FastifyInstance } from 'fastify';
-import { Prisma } from '../../../../../../generated/prisma/client.js';
-import type {
-  CreateColdStorageRequest,
-  UpdateColdStorageRequest,
-  ColdStorage,
-} from '../types/cold-storage.js';
+import { Prisma, type Prisma as PrismaTypes } from '../../../../../../generated/prisma/client.js';
+import type { CreateColdStorageRequest, UpdateColdStorageRequest } from '../types/cold-storage.js';
+
+/**
+ * Type for ColdStorage with preferences relation included
+ */
+type ColdStorageWithPreferences = PrismaTypes.ColdStorageGetPayload<{
+  include: { preferences: true };
+}>;
 
 /**
  * Data Access Object for ColdStorage
@@ -23,13 +26,16 @@ export class ColdStorageDAO {
     orderBy?:
       | Prisma.ColdStorageOrderByWithRelationInput
       | Prisma.ColdStorageOrderByWithRelationInput[];
-  }): Promise<ColdStorage[]> {
+  }): Promise<ColdStorageWithPreferences[]> {
     try {
       return await this.fastify.prisma.coldStorage.findMany({
         skip: options?.skip,
         take: options?.take,
         where: options?.where,
         orderBy: options?.orderBy || { createdAt: 'desc' },
+        include: {
+          preferences: true,
+        },
       });
     } catch (error) {
       this.fastify.log.error(error, 'Error in findAll cold storages');
@@ -52,10 +58,13 @@ export class ColdStorageDAO {
   /**
    * Get a cold storage by ID
    */
-  async findById(id: string): Promise<ColdStorage | null> {
+  async findById(id: string): Promise<ColdStorageWithPreferences | null> {
     try {
       return await this.fastify.prisma.coldStorage.findUnique({
         where: { id },
+        include: {
+          preferences: true,
+        },
       });
     } catch (error) {
       this.fastify.log.error(error, `Error in findById cold storage: ${id}`);
@@ -66,7 +75,7 @@ export class ColdStorageDAO {
   /**
    * Create a new cold storage
    */
-  async create(data: CreateColdStorageRequest): Promise<ColdStorage> {
+  async create(data: CreateColdStorageRequest): Promise<ColdStorageWithPreferences> {
     try {
       return await this.fastify.prisma.coldStorage.create({
         data: {
@@ -78,6 +87,21 @@ export class ColdStorageDAO {
           isPaid: data.isPaid ?? false,
           isActive: data.isActive ?? true,
           plan: data.plan ?? 'Basic',
+          preferences: data.preferences
+            ? {
+                create: {
+                  bagSizes: data.preferences.bagSizes ?? [],
+                  commodities: data.preferences.commodities ?? [],
+                  generation: data.preferences.generation ?? null,
+                  rouging: data.preferences.rouging ?? null,
+                  tuberType: data.preferences.tuberType ?? null,
+                  grader: data.preferences.grader ?? null,
+                },
+              }
+            : undefined,
+        },
+        include: {
+          preferences: true,
         },
       });
     } catch (error) {
@@ -89,19 +113,54 @@ export class ColdStorageDAO {
   /**
    * Update a cold storage by ID
    */
-  async update(id: string, data: UpdateColdStorageRequest): Promise<ColdStorage> {
+  async update(id: string, data: UpdateColdStorageRequest): Promise<ColdStorageWithPreferences> {
     try {
+      const updateData: Prisma.ColdStorageUpdateInput = {
+        ...(data.name !== undefined && { name: data.name }),
+        ...(data.address !== undefined && { address: data.address }),
+        ...(data.mobileNumber !== undefined && { mobileNumber: data.mobileNumber }),
+        ...(data.capacity !== undefined && { capacity: data.capacity }),
+        ...(data.imageUrl !== undefined && { imageUrl: data.imageUrl }),
+        ...(data.isPaid !== undefined && { isPaid: data.isPaid }),
+        ...(data.isActive !== undefined && { isActive: data.isActive }),
+        ...(data.plan !== undefined && { plan: data.plan }),
+      };
+
+      // Handle preferences update
+      if (data.preferences !== undefined) {
+        if (data.preferences === null) {
+          // Delete existing preferences if any
+          updateData.preferences = { delete: true };
+        } else {
+          // Upsert preferences (update if exists, create if not)
+          updateData.preferences = {
+            upsert: {
+              create: {
+                bagSizes: data.preferences.bagSizes ?? [],
+                commodities: data.preferences.commodities ?? [],
+                generation: data.preferences.generation ?? null,
+                rouging: data.preferences.rouging ?? null,
+                tuberType: data.preferences.tuberType ?? null,
+                grader: data.preferences.grader ?? null,
+              },
+              update: {
+                bagSizes: data.preferences.bagSizes ?? [],
+                commodities: data.preferences.commodities ?? [],
+                generation: data.preferences.generation ?? null,
+                rouging: data.preferences.rouging ?? null,
+                tuberType: data.preferences.tuberType ?? null,
+                grader: data.preferences.grader ?? null,
+              },
+            },
+          };
+        }
+      }
+
       return await this.fastify.prisma.coldStorage.update({
         where: { id },
-        data: {
-          ...(data.name !== undefined && { name: data.name }),
-          ...(data.address !== undefined && { address: data.address }),
-          ...(data.mobileNumber !== undefined && { mobileNumber: data.mobileNumber }),
-          ...(data.capacity !== undefined && { capacity: data.capacity }),
-          ...(data.imageUrl !== undefined && { imageUrl: data.imageUrl }),
-          ...(data.isPaid !== undefined && { isPaid: data.isPaid }),
-          ...(data.isActive !== undefined && { isActive: data.isActive }),
-          ...(data.plan !== undefined && { plan: data.plan }),
+        data: updateData,
+        include: {
+          preferences: true,
         },
       });
     } catch (error) {
@@ -113,10 +172,13 @@ export class ColdStorageDAO {
   /**
    * Delete a cold storage by ID
    */
-  async delete(id: string): Promise<ColdStorage> {
+  async delete(id: string): Promise<ColdStorageWithPreferences> {
     try {
       return await this.fastify.prisma.coldStorage.delete({
         where: { id },
+        include: {
+          preferences: true,
+        },
       });
     } catch (error) {
       this.fastify.log.error(error, `Error in delete cold storage: ${id}`);

@@ -4,6 +4,7 @@ import cors from '@fastify/cors';
 import prismaPlugin from './plugins/prisma.js';
 import { config } from 'dotenv';
 import coldStorageRoutes from '@/modules/base/cold-storage/v1/routes/cold-storage.routes.js';
+import storeAdminRoutes from './modules/base/store-admin/v1/routes/store-admin.routes.js';
 config();
 
 export const buildApp = async (): Promise<FastifyInstance> => {
@@ -32,6 +33,7 @@ export const buildApp = async (): Promise<FastifyInstance> => {
   // Register Prisma plugin
   await fastify.register(prismaPlugin);
   await fastify.register(coldStorageRoutes, { prefix: '/api/v1/base/cold-storage' });
+  await fastify.register(storeAdminRoutes, { prefix: '/api/v1/base/store-admin' });
 
   // Health check endpoint
   fastify.get('/health', () => ({
