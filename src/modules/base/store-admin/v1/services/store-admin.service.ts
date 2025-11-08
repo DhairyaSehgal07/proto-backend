@@ -434,7 +434,7 @@ export class StoreAdminService {
         farmerId: link.farmerId,
         coldStorageId: link.coldStorageId,
         linkedById: link.linkedById,
-        accountNumber: link.accountNumber,
+        accountNumber: link.accountNumber.toString(),
         isActive: link.isActive,
         notes: link.notes,
         createdAt: link.createdAt,
