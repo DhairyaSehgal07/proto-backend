@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.3.0](https://github.com/DhairyaSehgal07/ColdOp-backend/compare/v0.2.0...v0.3.0) (2025-11-08)
+
+### ### Added
+
+- add incoming-orders module with CRUD operations and route options/validators ([93abecd](https://github.com/DhairyaSehgal07/ColdOp-backend/commit/93abecddda61402905a69c6899f83955719d6e5f))
+
 ## [0.2.0](https://github.com/DhairyaSehgal07/ColdOp-backend/compare/v0.1.2...v0.2.0) (2025-11-07)
 
 ### ### Added
