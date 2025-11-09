@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.3.1](https://github.com/DhairyaSehgal07/ColdOp-backend/compare/v0.3.0...v0.3.1) (2025-11-09)
+
+### ### Added
+
+- **outgoing-orders:** add routes for listing, deleting, and farmer-specific queries ([56c59b7](https://github.com/DhairyaSehgal07/ColdOp-backend/commit/56c59b7d80209098053448b6b1a4768f31e26ef0))
+
 ## [0.3.0](https://github.com/DhairyaSehgal07/ColdOp-backend/compare/v0.2.0...v0.3.0) (2025-11-08)
 
 ### ### Added
