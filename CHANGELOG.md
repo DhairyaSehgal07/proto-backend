@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.3.2](https://github.com/DhairyaSehgal07/ColdOp-backend/compare/v0.3.1...v0.3.2) (2025-11-09)
+
+### ### Added
+
+- add mobile/web authentication support with cookie and bearer token ([cd9c228](https://github.com/DhairyaSehgal07/ColdOp-backend/commit/cd9c228bf90068a42197373b2702144accfa60bf))
+
 ### [0.3.1](https://github.com/DhairyaSehgal07/ColdOp-backend/compare/v0.3.0...v0.3.1) (2025-11-09)
 
 ### ### Added
