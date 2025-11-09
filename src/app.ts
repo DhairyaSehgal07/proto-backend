@@ -2,6 +2,7 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
+import cookie from '@fastify/cookie';
 import prismaPlugin from './plugins/prisma.js';
 import { config } from 'dotenv';
 import coldStorageRoutes from '@/modules/base/cold-storage/v1/routes/cold-storage.routes.js';
@@ -35,6 +36,9 @@ export const buildApp = async (): Promise<FastifyInstance> => {
 
   // Register Prisma plugin
   await fastify.register(prismaPlugin);
+
+  // Register Cookie plugin
+  await fastify.register(cookie);
 
   // Register JWT plugin
   await fastify.register(jwt, {

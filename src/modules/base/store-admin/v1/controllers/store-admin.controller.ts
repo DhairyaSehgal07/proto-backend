@@ -69,16 +69,36 @@ export class StoreAdminController {
     reply: FastifyReply
   ): Promise<void> {
     try {
-      const result = await this.service.login(
-        request.body as LoginStoreAdminRequest,
-        request.server
-      );
+      const loginData = request.body as LoginStoreAdminRequest;
+      const isMobile = loginData.isMobile ?? false;
 
-      reply.code(200).send({
-        success: true,
-        message: 'Login successful',
-        data: result,
-      });
+      const result = await this.service.login(loginData, request.server);
+
+      // If mobile, send token in response; otherwise set it in cookie
+      if (isMobile) {
+        reply.code(200).send({
+          success: true,
+          message: 'Login successful',
+          data: result,
+        });
+      } else {
+        // Set token in HTTP-only cookie
+        reply.setCookie('jwt', result.token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+          path: '/',
+          maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
+        });
+
+        // Send response without token
+        const { token: _token, ...dataWithoutToken } = result;
+        reply.code(200).send({
+          success: true,
+          message: 'Login successful',
+          data: dataWithoutToken,
+        });
+      }
     } catch (error) {
       this.handleError(error, reply);
     }

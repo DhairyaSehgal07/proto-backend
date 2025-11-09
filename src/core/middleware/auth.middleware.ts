@@ -28,15 +28,25 @@ export interface JWTPayload {
 
 /**
  * Middleware to authenticate store admin via JWT token
+ * Supports both Bearer token (Authorization header) and cookie-based authentication
  */
 export async function authenticateAdmin(
   request: FastifyRequest,
   reply: FastifyReply
 ): Promise<void> {
   try {
-    // Check for token in Authorization header
+    let token: string | undefined;
+
+    // Check for token in Authorization header (Bearer token)
     const authHeader = request.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    } else {
+      // Check for token in cookie (cookie name is 'jwt')
+      token = request.cookies.jwt;
+    }
+
+    if (!token) {
       reply.code(401).send({
         success: false,
         error: {
@@ -49,7 +59,16 @@ export async function authenticateAdmin(
 
     try {
       // Verify token using Fastify JWT
-      const decoded = await request.jwtVerify<JWTPayload>();
+      // Use the JWT plugin's verify method which works with both header and manually provided tokens
+      let decoded: JWTPayload;
+
+      // If token is from Authorization header, use jwtVerify (async)
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        decoded = await request.jwtVerify<JWTPayload>();
+      } else {
+        // If token is from cookie, verify manually using the JWT plugin
+        decoded = request.server.jwt.verify<JWTPayload>(token);
+      }
 
       // Get admin from database
       const dao = new StoreAdminDAO(request.server);

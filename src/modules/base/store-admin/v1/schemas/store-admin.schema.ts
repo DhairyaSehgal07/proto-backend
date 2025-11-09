@@ -46,6 +46,7 @@ export const storeAdminQuerySchema = z.object({
 export const loginStoreAdminSchema = z.object({
   mobileNumber: z.string().regex(/^[0-9]{10}$/, 'Mobile number must be 10 digits'),
   password: z.string().min(1, 'Password is required'),
+  isMobile: z.boolean().optional().default(false),
 });
 
 /**

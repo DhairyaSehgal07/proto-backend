@@ -59,6 +59,7 @@ export interface StoreAdminListResponse {
 export interface LoginStoreAdminRequest {
   mobileNumber: string;
   password: string;
+  isMobile?: boolean;
 }
 
 /**

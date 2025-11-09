@@ -17,9 +17,33 @@ export const loginOptions = {
           data: {
             type: 'object',
             properties: {
-              admin: { type: 'object' },
-              token: { type: 'string' },
+              admin: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  coldStorageId: { type: 'string' },
+                  name: { type: 'string' },
+                  personalAddress: { type: 'string', nullable: true },
+                  mobileNumber: { type: 'string' },
+                  role: { type: 'string', enum: ['Admin', 'Manager', 'Assistant'] },
+                  isVerified: { type: 'boolean' },
+                  createdAt: { type: 'string', format: 'date-time' },
+                  updatedAt: { type: 'string', format: 'date-time' },
+                },
+                required: [
+                  'id',
+                  'coldStorageId',
+                  'name',
+                  'mobileNumber',
+                  'role',
+                  'isVerified',
+                  'createdAt',
+                  'updatedAt',
+                ],
+              },
+              token: { type: 'string' }, // Only present when isMobile is true
             },
+            required: ['admin'],
           },
         },
       },
