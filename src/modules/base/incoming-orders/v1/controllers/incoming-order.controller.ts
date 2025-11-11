@@ -175,8 +175,6 @@ export class IncomingOrderController {
         }
       );
 
-      console.log('result is: ', result);
-
       reply.code(200).send({
         success: true,
         data: result.data,
@@ -213,8 +211,6 @@ export class IncomingOrderController {
 
       const { id } = request.params;
       const order = await this.service.getById(id, request.admin.coldStorageId);
-
-      console.log('order is: ', order);
 
       reply.code(200).send({
         success: true,

@@ -172,6 +172,9 @@ export const updateOptions = {
                             properties: {
                               name: { type: 'string' },
                               locationId: { type: 'string' },
+                              floor: { type: ['string', 'null'] },
+                              row: { type: ['string', 'null'] },
+                              chamber: { type: ['string', 'null'] },
                               incomingOrderId: { type: 'string' },
                               varietyName: { type: 'string' },
                               quantityBefore: { type: 'number' },
@@ -311,6 +314,9 @@ export const listOptions = {
                           properties: {
                             name: { type: 'string' },
                             locationId: { type: 'string' },
+                            floor: { type: ['string', 'null'] },
+                            row: { type: ['string', 'null'] },
+                            chamber: { type: ['string', 'null'] },
                             incomingOrderId: { type: 'string' },
                             varietyName: { type: 'string' },
                             quantityBefore: { type: 'number' },
@@ -419,6 +425,9 @@ export const getByFarmerOptions = {
                           properties: {
                             name: { type: 'string' },
                             locationId: { type: 'string' },
+                            floor: { type: ['string', 'null'] },
+                            row: { type: ['string', 'null'] },
+                            chamber: { type: ['string', 'null'] },
                             incomingOrderId: { type: 'string' },
                             varietyName: { type: 'string' },
                             quantityBefore: { type: 'number' },

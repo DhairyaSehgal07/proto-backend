@@ -12,6 +12,9 @@ export interface BagSizeSnapshotInput {
   quantityRemoved: number;
   quantityAfter: number;
   approxWeight?: number;
+  floor?: string;
+  row?: string;
+  chamber?: string;
 }
 
 /**

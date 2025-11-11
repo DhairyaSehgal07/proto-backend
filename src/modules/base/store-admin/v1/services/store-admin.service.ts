@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 import bcrypt from 'bcryptjs';
 import { StoreAdminDAO } from '../dao/store-admin.dao.js';
 import type {
@@ -8,11 +8,29 @@ import type {
   StoreAdminListResponse,
   LoginStoreAdminRequest,
   LoginStoreAdminResponse,
+  RefreshTokenRequest,
+  RefreshTokenResponse,
   RegisterFarmerRequest,
   RegisterFarmerResponse,
+  ColdStorageResponse,
+  Preferences,
+  DaybookResponse,
+  DaybookOrderItem,
 } from '../types/store-admin.js';
-import { Prisma, type Prisma as PrismaTypes } from '../../../../../../generated/prisma/client.js';
+import {
+  Prisma,
+  type Prisma as PrismaTypes,
+  Commodity,
+} from '../../../../../../generated/prisma/client.js';
 import type { JWTPayload } from '@/core/middleware/auth.middleware.js';
+import {
+  validatePassword,
+  validateMobileNumber,
+  generateRefreshToken,
+  getClientIp,
+  getDeviceInfo,
+  ACCOUNT_LOCKOUT_CONFIG,
+} from '@/utils/security.utils.js';
 
 /**
  * Custom error classes for business logic
@@ -124,12 +142,18 @@ export class StoreAdminService {
       throw new StoreAdminValidationError('Name must be at least 2 characters long');
     }
 
-    if (!data.mobileNumber || !/^[0-9]{10}$/.test(data.mobileNumber)) {
-      throw new StoreAdminValidationError('Mobile number must be exactly 10 digits');
+    // Validate mobile number with country code
+    const mobileValidation = validateMobileNumber(data.mobileNumber);
+    if (!mobileValidation.isValid) {
+      throw new StoreAdminValidationError(mobileValidation.error || 'Invalid mobile number format');
     }
 
-    if (!data.password || data.password.length < 6) {
-      throw new StoreAdminValidationError('Password must be at least 6 characters long');
+    // Validate password complexity
+    const passwordValidation = validatePassword(data.password);
+    if (!passwordValidation.isValid) {
+      throw new StoreAdminValidationError(
+        `Password validation failed: ${passwordValidation.errors.join(', ')}`
+      );
     }
 
     if (!data.coldStorageId) {
@@ -198,8 +222,11 @@ export class StoreAdminService {
 
     // Validate mobile number if provided
     if (data.mobileNumber !== undefined) {
-      if (!data.mobileNumber || !/^[0-9]{10}$/.test(data.mobileNumber)) {
-        throw new StoreAdminValidationError('Mobile number must be exactly 10 digits');
+      const mobileValidation = validateMobileNumber(data.mobileNumber);
+      if (!mobileValidation.isValid) {
+        throw new StoreAdminValidationError(
+          mobileValidation.error || 'Invalid mobile number format'
+        );
       }
 
       // Check if mobile number is already used by another store admin in the same cold storage
@@ -220,8 +247,13 @@ export class StoreAdminService {
     }
 
     // Validate password if provided
-    if (data.password !== undefined && data.password.length < 6) {
-      throw new StoreAdminValidationError('Password must be at least 6 characters long');
+    if (data.password !== undefined) {
+      const passwordValidation = validatePassword(data.password);
+      if (!passwordValidation.isValid) {
+        throw new StoreAdminValidationError(
+          `Password validation failed: ${passwordValidation.errors.join(', ')}`
+        );
+      }
     }
 
     // Hash the password if provided
@@ -259,30 +291,125 @@ export class StoreAdminService {
   }
 
   /**
-   * Login store admin
+   * Login store admin with security features:
+   * - Account lockout after failed attempts
+   * - Login audit trail
+   * - Refresh token pattern
+   * - Rate limiting (handled by middleware)
    */
   async login(
     data: LoginStoreAdminRequest,
-    fastify: FastifyInstance
+    fastify: FastifyInstance,
+    request?: FastifyRequest
   ): Promise<LoginStoreAdminResponse> {
-    // Validate mobile number
-    if (!data.mobileNumber || !/^[0-9]{10}$/.test(data.mobileNumber)) {
-      throw new StoreAdminValidationError('Mobile number must be exactly 10 digits');
+    const ipAddress = request ? getClientIp(request) : 'unknown';
+    const deviceInfo = request ? getDeviceInfo(request) : 'unknown';
+
+    // Normalize mobile number for database lookup
+    // Support both formats: with country code (+919877741375) and without (9877741375)
+    let normalizedMobileNumber: string = data.mobileNumber;
+    const mobileValidation = validateMobileNumber(data.mobileNumber);
+
+    // If validation fails, try to handle old format (10 digits without country code)
+    if (!mobileValidation.isValid) {
+      // Check if it's the old 10-digit format
+      if (/^[0-9]{10}$/.test(data.mobileNumber)) {
+        // Old format - use as is for backward compatibility
+        normalizedMobileNumber = data.mobileNumber;
+      } else {
+        // Invalid format
+        await this.logLoginAttempt(
+          data.mobileNumber,
+          null,
+          false,
+          ipAddress,
+          deviceInfo,
+          mobileValidation.error
+        );
+        throw new StoreAdminValidationError(
+          mobileValidation.error ||
+            'Invalid mobile number format. Use +[country code][number] or 10 digits'
+        );
+      }
+    } else {
+      // New format with country code - extract just the number part for database lookup
+      // Database stores numbers without country code, so we need to search for just the number
+      // For Indian numbers: +91XXXXXXXXXX -> XXXXXXXXXX (10 digits)
+      normalizedMobileNumber =
+        mobileValidation.number || data.mobileNumber.replace(/^\+\d{1,3}/, '');
+
+      // Ensure we have a valid number (should be 10 digits for Indian numbers)
+      if (!normalizedMobileNumber || normalizedMobileNumber.length < 7) {
+        await this.logLoginAttempt(
+          data.mobileNumber,
+          null,
+          false,
+          ipAddress,
+          deviceInfo,
+          'Failed to extract mobile number from country code format'
+        );
+        throw new StoreAdminValidationError(
+          mobileValidation.error || 'Invalid mobile number format'
+        );
+      }
     }
 
     if (!data.password || data.password.length === 0) {
       throw new StoreAdminValidationError('Password is required');
     }
 
-    // Find admin by mobile number only (mobileNumber is unique across all cold storages)
-    const storeAdmin = await this.dao.findByMobileNumber(data.mobileNumber);
+    // Log the normalized number for debugging (remove in production)
+    fastify.log.debug(
+      { original: data.mobileNumber, normalized: normalizedMobileNumber },
+      'Mobile number normalization'
+    );
 
+    // Find admin by mobile number (database stores without country code)
+    const storeAdmin = await this.dao.findByMobileNumber(normalizedMobileNumber);
+
+    // Check account lockout
+    if (storeAdmin) {
+      const now = new Date();
+      if (storeAdmin.lockedUntil && storeAdmin.lockedUntil > now) {
+        const minutesRemaining = Math.ceil(
+          (storeAdmin.lockedUntil.getTime() - now.getTime()) / 60000
+        );
+        await this.logLoginAttempt(
+          normalizedMobileNumber,
+          storeAdmin.id,
+          false,
+          ipAddress,
+          deviceInfo,
+          `Account locked. Try again in ${minutesRemaining} minutes`
+        );
+        throw new StoreAdminValidationError(
+          `Account is temporarily locked due to too many failed login attempts. Please try again in ${minutesRemaining} minutes.`
+        );
+      }
+    }
+
+    // Check if account exists and is verified
     if (!storeAdmin) {
+      await this.logLoginAttempt(
+        normalizedMobileNumber,
+        null,
+        false,
+        ipAddress,
+        deviceInfo,
+        'Invalid credentials'
+      );
       throw new StoreAdminValidationError('Invalid mobile number or password');
     }
 
-    // Check if account is verified
     if (!storeAdmin.isVerified) {
+      await this.logLoginAttempt(
+        normalizedMobileNumber,
+        storeAdmin.id,
+        false,
+        ipAddress,
+        deviceInfo,
+        'Account not verified'
+      );
       throw new StoreAdminValidationError(
         'Admin account is not verified. Please contact administrator.'
       );
@@ -292,26 +419,187 @@ export class StoreAdminService {
     const isPasswordValid = await bcrypt.compare(data.password, storeAdmin.password);
 
     if (!isPasswordValid) {
+      // Increment failed login attempts
+      const newFailedAttempts = (storeAdmin.failedLoginAttempts || 0) + 1;
+      const shouldLock = newFailedAttempts >= ACCOUNT_LOCKOUT_CONFIG.MAX_FAILED_ATTEMPTS;
+
+      const updateData: Prisma.StoreAdminUpdateInput = {
+        failedLoginAttempts: newFailedAttempts,
+        ...(shouldLock && {
+          lockedUntil: new Date(
+            Date.now() + ACCOUNT_LOCKOUT_CONFIG.LOCKOUT_DURATION_MINUTES * 60 * 1000
+          ),
+        }),
+      };
+
+      await this.fastify.prisma.storeAdmin.update({
+        where: { id: storeAdmin.id },
+        data: updateData,
+      });
+
+      await this.logLoginAttempt(
+        normalizedMobileNumber,
+        storeAdmin.id,
+        false,
+        ipAddress,
+        deviceInfo,
+        'Invalid password'
+      );
+
+      if (shouldLock) {
+        throw new StoreAdminValidationError(
+          `Account has been temporarily locked due to ${ACCOUNT_LOCKOUT_CONFIG.MAX_FAILED_ATTEMPTS} failed login attempts. Please try again in ${ACCOUNT_LOCKOUT_CONFIG.LOCKOUT_DURATION_MINUTES} minutes.`
+        );
+      }
+
       throw new StoreAdminValidationError('Invalid mobile number or password');
     }
 
-    // Generate JWT token
-    const payload: JWTPayload = {
+    // Successful login - reset failed attempts and unlock account
+    await this.fastify.prisma.storeAdmin.update({
+      where: { id: storeAdmin.id },
+      data: {
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+      },
+    });
+
+    // Generate tokens
+    // Access token: short-lived (15 minutes)
+    const accessTokenPayload: JWTPayload = {
       adminId: storeAdmin.id,
-      adminName: storeAdmin.name,
-      coldStorageId: storeAdmin.coldStorageId,
-      coldStorageImageUrl: storeAdmin.coldStorage.imageUrl,
       role: storeAdmin.role,
     };
 
-    const token = fastify.jwt.sign(payload, {
-      expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+    const accessToken = fastify.jwt.sign(accessTokenPayload, {
+      expiresIn: process.env.JWT_EXPIRES_IN || '15m',
     });
+
+    // Refresh token: long-lived (7 days), stored in database
+    const refreshToken = generateRefreshToken();
+    const refreshTokenExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+    // Store refresh token in database
+    await this.fastify.prisma.session.create({
+      data: {
+        adminId: storeAdmin.id,
+        refreshToken,
+        deviceInfo,
+        ipAddress,
+        expiresAt: refreshTokenExpiresAt,
+      },
+    });
+
+    // Log successful login
+    await this.logLoginAttempt(normalizedMobileNumber, storeAdmin.id, true, ipAddress, deviceInfo);
 
     return {
       admin: this.mapToResponse(storeAdmin),
-      token,
+      coldStorage: this.mapColdStorageToResponse(storeAdmin.coldStorage),
+      accessToken,
+      refreshToken,
     };
+  }
+
+  /**
+   * Refresh access token using refresh token
+   */
+  async refreshToken(
+    data: RefreshTokenRequest,
+    fastify: FastifyInstance,
+    _request?: FastifyRequest
+  ): Promise<RefreshTokenResponse> {
+    // Find session by refresh token
+    const session = await this.fastify.prisma.session.findUnique({
+      where: { refreshToken: data.refreshToken },
+      include: { admin: { include: { coldStorage: true } } },
+    });
+
+    if (!session) {
+      throw new StoreAdminValidationError('Invalid refresh token');
+    }
+
+    // Check if session is expired
+    if (session.expiresAt < new Date()) {
+      // Delete expired session
+      await this.fastify.prisma.session.delete({ where: { id: session.id } });
+      throw new StoreAdminValidationError('Refresh token has expired. Please login again.');
+    }
+
+    // Check if admin still exists and is verified
+    if (!session.admin || !session.admin.isVerified) {
+      await this.fastify.prisma.session.delete({ where: { id: session.id } });
+      throw new StoreAdminValidationError('Admin account is not verified or has been deleted');
+    }
+
+    // Generate new access token
+    const accessTokenPayload: JWTPayload = {
+      adminId: session.admin.id,
+      role: session.admin.role,
+    };
+
+    const accessToken = fastify.jwt.sign(accessTokenPayload, {
+      expiresIn: process.env.JWT_EXPIRES_IN || '15m',
+    });
+
+    // Optionally rotate refresh token (for better security)
+    // For now, we'll keep the same refresh token
+    // Update session last access time
+    await this.fastify.prisma.session.update({
+      where: { id: session.id },
+      data: { updatedAt: new Date() },
+    });
+
+    return {
+      accessToken,
+      refreshToken: session.refreshToken,
+    };
+  }
+
+  /**
+   * Logout - invalidate refresh token
+   */
+  async logout(refreshToken: string): Promise<void> {
+    await this.fastify.prisma.session.deleteMany({
+      where: { refreshToken },
+    });
+  }
+
+  /**
+   * Logout all sessions for an admin
+   */
+  async logoutAll(adminId: string): Promise<void> {
+    await this.fastify.prisma.session.deleteMany({
+      where: { adminId },
+    });
+  }
+
+  /**
+   * Log login attempt for audit trail
+   */
+  private async logLoginAttempt(
+    mobileNumber: string,
+    adminId: string | null,
+    success: boolean,
+    ipAddress: string,
+    deviceInfo: string,
+    failureReason?: string
+  ): Promise<void> {
+    try {
+      await this.fastify.prisma.loginAudit.create({
+        data: {
+          adminId,
+          mobileNumber,
+          success,
+          ipAddress,
+          deviceInfo,
+          failureReason: success ? null : failureReason || null,
+        },
+      });
+    } catch (error) {
+      // Log error but don't fail the login process
+      this.fastify.log.error(error, 'Failed to log login attempt');
+    }
   }
 
   /**
@@ -462,5 +750,655 @@ export class StoreAdminService {
       createdAt: storeAdmin.createdAt,
       updatedAt: storeAdmin.updatedAt,
     };
+  }
+
+  /**
+   * Map cold storage database model to response DTO with preferences
+   */
+  private mapColdStorageToResponse(
+    coldStorage: PrismaTypes.ColdStorageGetPayload<{
+      include: { preferences: true };
+    }>
+  ): ColdStorageResponse {
+    // Map preferences, excluding internal fields (id, createdAt, updatedAt)
+    const preferences: Preferences | null = coldStorage.preferences
+      ? {
+          bagSizes: coldStorage.preferences.bagSizes ?? [],
+          commodities: coldStorage.preferences.commodities ?? [],
+          generation: coldStorage.preferences.generation ?? null,
+          rouging: coldStorage.preferences.rouging ?? null,
+          tuberType: coldStorage.preferences.tuberType ?? null,
+          grader: coldStorage.preferences.grader ?? null,
+        }
+      : null;
+
+    return {
+      id: coldStorage.id,
+      name: coldStorage.name,
+      address: coldStorage.address,
+      mobileNumber: coldStorage.mobileNumber,
+      capacity: coldStorage.capacity,
+      imageUrl: coldStorage.imageUrl,
+      isPaid: coldStorage.isPaid,
+      isActive: coldStorage.isActive,
+      plan: coldStorage.plan,
+      preferences,
+      createdAt: coldStorage.createdAt,
+      updatedAt: coldStorage.updatedAt,
+    };
+  }
+
+  /**
+   * Get daybook orders (incoming and outgoing) for a cold storage
+   * OPTIMIZED for high-frequency reads - uses direct Prisma queries, database-level sorting/pagination
+   * Supports filtering by type, commodity, search, sorting, and pagination
+   */
+  async getDaybook(
+    coldStorageId: string,
+    options?: {
+      type?: 'all' | 'incoming' | 'outgoing';
+      commodity?: string;
+      search?: string;
+      sortBy?: 'latest' | 'oldest';
+      page?: number;
+      limit?: number;
+    }
+  ): Promise<DaybookResponse> {
+    const type = options?.type ?? 'all';
+    const page = options?.page ?? 1;
+    const limit = options?.limit ?? 10;
+    const sortBy = options?.sortBy ?? 'latest';
+    const orderBy = sortBy === 'latest' ? 'desc' : 'asc';
+
+    // Build common where clause
+    const buildWhere = () => {
+      const where: Prisma.IncomingOrderWhereInput | Prisma.OutgoingOrderWhereInput = {
+        coldStorageId,
+      };
+
+      if (options?.commodity) {
+        where.commodity = options.commodity as Commodity;
+      }
+
+      if (options?.search) {
+        const gatePassNumber = parseInt(options.search, 10);
+        if (!isNaN(gatePassNumber)) {
+          where.gatePassNumber = gatePassNumber;
+        }
+      }
+
+      return where;
+    };
+
+    // Helper function to create pagination metadata
+    const createPaginationMeta = (total: number, currentPage: number, itemsPerPage: number) => {
+      const totalPages = Math.ceil(total / itemsPerPage);
+      return {
+        currentPage,
+        totalPages,
+        totalItems: total,
+        itemsPerPage,
+        hasNextPage: currentPage < totalPages,
+        hasPreviousPage: currentPage > 1,
+        nextPage: currentPage < totalPages ? currentPage + 1 : null,
+        previousPage: currentPage > 1 ? currentPage - 1 : null,
+      };
+    };
+
+    // Helper function to enrich orders with location data (batch fetch)
+    const enrichOrdersWithLocations = async <
+      T extends { varieties?: Array<{ bagSizes?: Array<{ locationId: string }> }> },
+    >(
+      orders: T[]
+    ): Promise<T[]> => {
+      // Collect all location IDs
+      const locationIds = new Set<string>();
+      orders.forEach((order) => {
+        if (order.varieties) {
+          order.varieties.forEach((variety) => {
+            if (variety.bagSizes) {
+              variety.bagSizes.forEach((bag) => {
+                if (bag.locationId) {
+                  locationIds.add(bag.locationId);
+                }
+              });
+            }
+          });
+        }
+      });
+
+      if (locationIds.size === 0) {
+        return orders;
+      }
+
+      // Batch fetch all locations
+      const locations = await this.fastify.prisma.location.findMany({
+        where: { id: { in: Array.from(locationIds) } },
+        select: { id: true, floor: true, row: true, chamber: true },
+      });
+
+      const locationMap = new Map(locations.map((loc) => [loc.id, loc]));
+
+      // Enrich orders with location data
+      return orders.map((order) => {
+        if (!order.varieties) return order;
+        return {
+          ...order,
+          varieties: order.varieties.map((variety) => ({
+            ...variety,
+            bagSizes: variety.bagSizes?.map((bag) => {
+              const loc = locationMap.get(bag.locationId);
+              return {
+                ...bag,
+                ...(loc ? { floor: loc.floor, row: loc.row, chamber: loc.chamber } : {}),
+              };
+            }),
+          })),
+        };
+      });
+    };
+
+    // Helper function to sort bag sizes by name (in-place for performance)
+    const sortBagSizes = (orders: DaybookOrderItem[]) => {
+      for (const order of orders) {
+        if (order.varieties) {
+          for (const variety of order.varieties) {
+            if (variety.bagSizes) {
+              variety.bagSizes.sort((a, b) => a.name.localeCompare(b.name));
+            }
+          }
+        }
+      }
+      return orders;
+    };
+
+    // Common select for farmer storage link
+    const farmerStorageLinkSelect = {
+      id: true,
+      accountNumber: true,
+      farmer: {
+        select: {
+          id: true,
+          name: true,
+          address: true,
+          mobileNumber: true,
+          imageUrl: true,
+        },
+      },
+    };
+
+    switch (type) {
+      case 'incoming': {
+        const where = buildWhere() as Prisma.IncomingOrderWhereInput;
+        const skip = (page - 1) * limit;
+
+        // Fetch orders sorted by date (with createdAt as fallback for null dates)
+        // Since date can be null, we'll sort in memory to use date ?? createdAt
+        const [allOrdersForSort, count] = await Promise.all([
+          this.fastify.prisma.incomingOrder.findMany({
+            where,
+            orderBy: [{ date: orderBy === 'desc' ? 'desc' : 'asc' }, { createdAt: orderBy }],
+            select: {
+              id: true,
+              farmerStorageLinkId: true,
+              coldStorageId: true,
+              commodity: true,
+              gatePassType: true,
+              gatePassNumber: true,
+              remarks: true,
+              currentStockAtThatTime: true,
+              varieties: true,
+              date: true,
+              createdAt: true,
+              updatedAt: true,
+              farmerStorageLink: {
+                select: farmerStorageLinkSelect,
+              },
+              createdBy: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          }),
+          this.fastify.prisma.incomingOrder.count({ where }),
+        ]);
+
+        // Sort by date ?? createdAt and apply pagination
+        const orders = allOrdersForSort
+          .sort((a, b) => {
+            const dateA = (a.date ?? a.createdAt).getTime();
+            const dateB = (b.date ?? b.createdAt).getTime();
+            return orderBy === 'desc' ? dateB - dateA : dateA - dateB;
+          })
+          .slice(skip, skip + limit);
+
+        // Enrich with locations (batch fetch)
+        const enrichedOrders = await enrichOrdersWithLocations(orders);
+
+        const daybookOrders: DaybookOrderItem[] = enrichedOrders.map((order) => ({
+          id: order.id,
+          type: 'incoming' as const,
+          farmerStorageLinkId: order.farmerStorageLinkId,
+          coldStorageId: order.coldStorageId,
+          commodity: order.commodity,
+          gatePassType: order.gatePassType,
+          gatePassNumber: order.gatePassNumber,
+          remarks: order.remarks,
+          currentStockAtThatTime: order.currentStockAtThatTime,
+          createdAt: order.createdAt,
+          updatedAt: order.updatedAt,
+          farmerStorageLink: order.farmerStorageLink
+            ? {
+                id: order.farmerStorageLink.id,
+                accountNumber: order.farmerStorageLink.accountNumber,
+                farmer: order.farmerStorageLink.farmer,
+              }
+            : undefined,
+          createdBy: order.createdBy || undefined,
+          varieties: order.varieties?.map((variety) => ({
+            name: variety.name,
+            bagSizes: variety.bagSizes?.map((bag) => ({
+              name: bag.name,
+              quantityInit: bag.quantityInit,
+              quantityCurr: bag.quantityCurr,
+              approxWeight: bag.approxWeight ?? undefined,
+              locationId: bag.locationId,
+              floor: (bag as { floor?: string }).floor,
+              row: (bag as { row?: string }).row,
+              chamber: (bag as { chamber?: string }).chamber,
+            })),
+          })),
+        }));
+
+        sortBagSizes(daybookOrders);
+
+        return {
+          data: daybookOrders,
+          pagination: createPaginationMeta(count, page, limit),
+        };
+      }
+
+      case 'outgoing': {
+        const where = buildWhere() as Prisma.OutgoingOrderWhereInput;
+        const skip = (page - 1) * limit;
+
+        // Fetch orders sorted by date (with createdAt as fallback for null dates)
+        // Since date can be null, we'll sort in memory to use date ?? createdAt
+        const [allOrdersForSort, count] = await Promise.all([
+          this.fastify.prisma.outgoingOrder.findMany({
+            where,
+            orderBy: [{ date: orderBy === 'desc' ? 'desc' : 'asc' }, { createdAt: orderBy }],
+            select: {
+              id: true,
+              farmerStorageLinkId: true,
+              coldStorageId: true,
+              commodity: true,
+              gatePassType: true,
+              gatePassNumber: true,
+              remarks: true,
+              currentStockAtThatTime: true,
+              varieties: true,
+              totalBags: true,
+              totalWeight: true,
+              date: true,
+              createdAt: true,
+              updatedAt: true,
+              farmerStorageLink: {
+                select: {
+                  id: true,
+                  farmer: {
+                    select: {
+                      id: true,
+                      name: true,
+                      address: true,
+                      mobileNumber: true,
+                      imageUrl: true,
+                    },
+                  },
+                },
+              },
+              createdBy: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          }),
+          this.fastify.prisma.outgoingOrder.count({ where }),
+        ]);
+
+        // Sort by date ?? createdAt and apply pagination
+        const orders = allOrdersForSort
+          .sort((a, b) => {
+            const dateA = (a.date ?? a.createdAt).getTime();
+            const dateB = (b.date ?? b.createdAt).getTime();
+            return orderBy === 'desc' ? dateB - dateA : dateA - dateB;
+          })
+          .slice(skip, skip + limit);
+
+        // Enrich with locations (batch fetch)
+        const enrichedOrders = await enrichOrdersWithLocations(orders);
+
+        const daybookOrders: DaybookOrderItem[] = enrichedOrders.map((order) => ({
+          id: order.id,
+          type: 'outgoing' as const,
+          farmerStorageLinkId: order.farmerStorageLinkId,
+          coldStorageId: order.coldStorageId,
+          commodity: order.commodity,
+          gatePassType: order.gatePassType,
+          gatePassNumber: order.gatePassNumber,
+          remarks: order.remarks,
+          currentStockAtThatTime: order.currentStockAtThatTime,
+          createdAt: order.createdAt,
+          updatedAt: order.updatedAt,
+          farmerStorageLink: order.farmerStorageLink
+            ? {
+                id: order.farmerStorageLink.id,
+                farmer: order.farmerStorageLink.farmer,
+              }
+            : undefined,
+          totalBags: order.totalBags,
+          totalWeight: order.totalWeight,
+          createdBy: order.createdBy || undefined,
+          varieties: order.varieties?.map((variety) => ({
+            name: variety.name,
+            bagSizes: variety.bagSizes?.map((bag) => ({
+              name: bag.name,
+              quantityInit: bag.quantityBefore,
+              quantityCurr: bag.quantityAfter,
+              approxWeight: bag.approxWeight ?? undefined,
+              locationId: bag.locationId,
+              incomingOrderId: bag.incomingOrderId,
+              floor: (bag as { floor?: string }).floor,
+              row: (bag as { row?: string }).row,
+              chamber: (bag as { chamber?: string }).chamber,
+            })),
+          })),
+        }));
+
+        return {
+          data: daybookOrders,
+          pagination: createPaginationMeta(count, page, limit),
+        };
+      }
+
+      case 'all': {
+        // OPTIMIZED: Fetch a larger window (3x page size) from both tables, merge, sort, then paginate
+        // This avoids fetching all records while still getting accurate merged results
+        const fetchWindow = Math.max(limit * 3, 50); // At least 3 pages worth, minimum 50
+        const where = buildWhere();
+
+        const [incomingOrders, outgoingOrders, incomingCount, outgoingCount] = await Promise.all([
+          this.fastify.prisma.incomingOrder.findMany({
+            where: where as Prisma.IncomingOrderWhereInput,
+            take: fetchWindow,
+            orderBy: [{ date: orderBy === 'desc' ? 'desc' : 'asc' }, { createdAt: orderBy }],
+            select: {
+              id: true,
+              farmerStorageLinkId: true,
+              coldStorageId: true,
+              commodity: true,
+              gatePassType: true,
+              gatePassNumber: true,
+              remarks: true,
+              currentStockAtThatTime: true,
+              varieties: true,
+              date: true,
+              createdAt: true,
+              updatedAt: true,
+              farmerStorageLink: {
+                select: farmerStorageLinkSelect,
+              },
+              createdBy: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          }),
+          this.fastify.prisma.outgoingOrder.findMany({
+            where: where as Prisma.OutgoingOrderWhereInput,
+            take: fetchWindow,
+            orderBy: [{ date: orderBy === 'desc' ? 'desc' : 'asc' }, { createdAt: orderBy }],
+            select: {
+              id: true,
+              farmerStorageLinkId: true,
+              coldStorageId: true,
+              commodity: true,
+              gatePassType: true,
+              gatePassNumber: true,
+              remarks: true,
+              currentStockAtThatTime: true,
+              varieties: true,
+              totalBags: true,
+              totalWeight: true,
+              date: true,
+              createdAt: true,
+              updatedAt: true,
+              farmerStorageLink: {
+                select: {
+                  id: true,
+                  farmer: {
+                    select: {
+                      id: true,
+                      name: true,
+                      address: true,
+                      mobileNumber: true,
+                      imageUrl: true,
+                    },
+                  },
+                },
+              },
+              createdBy: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          }),
+          this.fastify.prisma.incomingOrder.count({
+            where: where as Prisma.IncomingOrderWhereInput,
+          }),
+          this.fastify.prisma.outgoingOrder.count({
+            where: where as Prisma.OutgoingOrderWhereInput,
+          }),
+        ]);
+
+        const totalCount = incomingCount + outgoingCount;
+
+        if (totalCount === 0) {
+          return {
+            data: [],
+            pagination: createPaginationMeta(0, page, limit),
+          };
+        }
+
+        // Merge and sort (using efficient merge for pre-sorted arrays)
+        const allOrders: DaybookOrderItem[] = [];
+        let incomingIdx = 0;
+        let outgoingIdx = 0;
+
+        // Merge two sorted arrays efficiently
+        while (incomingIdx < incomingOrders.length || outgoingIdx < outgoingOrders.length) {
+          const incomingOrder = incomingOrders[incomingIdx];
+          const outgoingOrder = outgoingOrders[outgoingIdx];
+
+          if (!incomingOrder) {
+            allOrders.push({
+              id: outgoingOrder.id,
+              type: 'outgoing',
+              farmerStorageLinkId: outgoingOrder.farmerStorageLinkId,
+              coldStorageId: outgoingOrder.coldStorageId,
+              commodity: outgoingOrder.commodity,
+              gatePassType: outgoingOrder.gatePassType,
+              gatePassNumber: outgoingOrder.gatePassNumber,
+              remarks: outgoingOrder.remarks,
+              currentStockAtThatTime: outgoingOrder.currentStockAtThatTime,
+              createdAt: outgoingOrder.createdAt,
+              updatedAt: outgoingOrder.updatedAt,
+              farmerStorageLink: outgoingOrder.farmerStorageLink
+                ? {
+                    id: outgoingOrder.farmerStorageLink.id,
+                    farmer: outgoingOrder.farmerStorageLink.farmer,
+                  }
+                : undefined,
+              totalBags: outgoingOrder.totalBags,
+              totalWeight: outgoingOrder.totalWeight,
+              createdBy: outgoingOrder.createdBy || undefined,
+              varieties: outgoingOrder.varieties?.map((variety) => ({
+                name: variety.name,
+                bagSizes: variety.bagSizes?.map((bag) => ({
+                  name: bag.name,
+                  quantityInit: bag.quantityBefore,
+                  quantityCurr: bag.quantityAfter,
+                  approxWeight: bag.approxWeight ?? undefined,
+                  locationId: bag.locationId,
+                  incomingOrderId: bag.incomingOrderId,
+                })),
+              })),
+            });
+            outgoingIdx++;
+          } else if (!outgoingOrder) {
+            allOrders.push({
+              id: incomingOrder.id,
+              type: 'incoming',
+              farmerStorageLinkId: incomingOrder.farmerStorageLinkId,
+              coldStorageId: incomingOrder.coldStorageId,
+              commodity: incomingOrder.commodity,
+              gatePassType: incomingOrder.gatePassType,
+              gatePassNumber: incomingOrder.gatePassNumber,
+              remarks: incomingOrder.remarks,
+              currentStockAtThatTime: incomingOrder.currentStockAtThatTime,
+              createdAt: incomingOrder.createdAt,
+              updatedAt: incomingOrder.updatedAt,
+              farmerStorageLink: incomingOrder.farmerStorageLink
+                ? {
+                    id: incomingOrder.farmerStorageLink.id,
+                    accountNumber: incomingOrder.farmerStorageLink.accountNumber,
+                    farmer: incomingOrder.farmerStorageLink.farmer,
+                  }
+                : undefined,
+              createdBy: incomingOrder.createdBy || undefined,
+              varieties: incomingOrder.varieties?.map((variety) => ({
+                name: variety.name,
+                bagSizes: variety.bagSizes?.map((bag) => ({
+                  name: bag.name,
+                  quantityInit: bag.quantityInit,
+                  quantityCurr: bag.quantityCurr,
+                  approxWeight: bag.approxWeight ?? undefined,
+                  locationId: bag.locationId,
+                })),
+              })),
+            });
+            incomingIdx++;
+          } else {
+            // Use date ?? createdAt for comparison
+            const incomingTime = (incomingOrder.date ?? incomingOrder.createdAt).getTime();
+            const outgoingTime = (outgoingOrder.date ?? outgoingOrder.createdAt).getTime();
+            const compare =
+              orderBy === 'desc' ? outgoingTime - incomingTime : incomingTime - outgoingTime;
+
+            if (compare <= 0) {
+              allOrders.push({
+                id: incomingOrder.id,
+                type: 'incoming',
+                farmerStorageLinkId: incomingOrder.farmerStorageLinkId,
+                coldStorageId: incomingOrder.coldStorageId,
+                commodity: incomingOrder.commodity,
+                gatePassType: incomingOrder.gatePassType,
+                gatePassNumber: incomingOrder.gatePassNumber,
+                remarks: incomingOrder.remarks,
+                currentStockAtThatTime: incomingOrder.currentStockAtThatTime,
+                createdAt: incomingOrder.createdAt,
+                updatedAt: incomingOrder.updatedAt,
+                farmerStorageLink: incomingOrder.farmerStorageLink
+                  ? {
+                      id: incomingOrder.farmerStorageLink.id,
+                      accountNumber: incomingOrder.farmerStorageLink.accountNumber,
+                      farmer: incomingOrder.farmerStorageLink.farmer,
+                    }
+                  : undefined,
+                createdBy: incomingOrder.createdBy || undefined,
+                varieties: incomingOrder.varieties?.map((variety) => ({
+                  name: variety.name,
+                  bagSizes: variety.bagSizes?.map((bag) => ({
+                    name: bag.name,
+                    quantityInit: bag.quantityInit,
+                    quantityCurr: bag.quantityCurr,
+                    approxWeight: bag.approxWeight ?? undefined,
+                    locationId: bag.locationId,
+                  })),
+                })),
+              });
+              incomingIdx++;
+            } else {
+              allOrders.push({
+                id: outgoingOrder.id,
+                type: 'outgoing',
+                farmerStorageLinkId: outgoingOrder.farmerStorageLinkId,
+                coldStorageId: outgoingOrder.coldStorageId,
+                commodity: outgoingOrder.commodity,
+                gatePassType: outgoingOrder.gatePassType,
+                gatePassNumber: outgoingOrder.gatePassNumber,
+                remarks: outgoingOrder.remarks,
+                currentStockAtThatTime: outgoingOrder.currentStockAtThatTime,
+                createdAt: outgoingOrder.createdAt,
+                updatedAt: outgoingOrder.updatedAt,
+                farmerStorageLink: outgoingOrder.farmerStorageLink
+                  ? {
+                      id: outgoingOrder.farmerStorageLink.id,
+                      farmer: outgoingOrder.farmerStorageLink.farmer,
+                    }
+                  : undefined,
+                totalBags: outgoingOrder.totalBags,
+                totalWeight: outgoingOrder.totalWeight,
+                createdBy: outgoingOrder.createdBy || undefined,
+                varieties: outgoingOrder.varieties?.map((variety) => ({
+                  name: variety.name,
+                  bagSizes: variety.bagSizes?.map((bag) => ({
+                    name: bag.name,
+                    quantityInit: bag.quantityBefore,
+                    quantityCurr: bag.quantityAfter,
+                    approxWeight: bag.approxWeight ?? undefined,
+                    locationId: bag.locationId,
+                  })),
+                })),
+              });
+              outgoingIdx++;
+            }
+          }
+
+          // Stop if we have enough for pagination
+          if (allOrders.length >= fetchWindow) {
+            break;
+          }
+        }
+
+        // Apply pagination
+        const skip = (page - 1) * limit;
+        const paginatedOrders = allOrders.slice(skip, skip + limit);
+
+        // Enrich with locations (batch fetch)
+        const enrichedOrders = await enrichOrdersWithLocations(paginatedOrders);
+
+        // Sort bag sizes
+        sortBagSizes(enrichedOrders);
+
+        return {
+          data: enrichedOrders,
+          pagination: createPaginationMeta(totalCount, page, limit),
+        };
+      }
+
+      default:
+        throw new StoreAdminValidationError(
+          "Invalid type parameter. Use 'all', 'incoming', or 'outgoing'."
+        );
+    }
   }
 }

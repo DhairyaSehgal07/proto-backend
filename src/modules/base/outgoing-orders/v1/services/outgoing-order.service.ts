@@ -508,7 +508,9 @@ export class OutgoingOrderService {
       },
     });
 
-    return this.mapToResponse(order);
+    const enrichedOrder = await this.enrichOrderWithLocations(order);
+
+    return this.mapToResponse(enrichedOrder);
   }
 
   /**
@@ -1103,7 +1105,9 @@ export class OutgoingOrderService {
       );
     }
 
-    return this.mapToResponse(updatedOrder);
+    const enrichedOrder = await this.enrichOrderWithLocations(updatedOrder);
+
+    return this.mapToResponse(enrichedOrder);
   }
 
   /**
@@ -1174,8 +1178,12 @@ export class OutgoingOrderService {
       this.fastify.prisma.outgoingOrder.count({ where }),
     ]);
 
+    const enrichedOrders = await Promise.all(
+      orders.map((order) => this.enrichOrderWithLocations(order))
+    );
+
     return {
-      data: orders.map((order) => this.mapToResponse(order)),
+      data: enrichedOrders.map((order) => this.mapToResponse(order)),
       count,
     };
   }
@@ -1246,8 +1254,12 @@ export class OutgoingOrderService {
       this.fastify.prisma.outgoingOrder.count({ where }),
     ]);
 
+    const enrichedOrders = await Promise.all(
+      orders.map((order) => this.enrichOrderWithLocations(order))
+    );
+
     return {
-      data: orders.map((order) => this.mapToResponse(order)),
+      data: enrichedOrders.map((order) => this.mapToResponse(order)),
       count,
     };
   }
@@ -1281,6 +1293,90 @@ export class OutgoingOrderService {
       existingOrder.commodity,
       existingOrder.createdAt
     );
+  }
+
+  /**
+   * Enrich order varieties with location data (floor, row, chamber)
+   */
+  private async enrichOrderWithLocations(order: {
+    id: string;
+    farmerStorageLinkId: string;
+    coldStorageId: string | null;
+    commodity: Commodity;
+    gatePassType: string;
+    gatePassNumber: number;
+    remarks: string | null;
+    currentStockAtThatTime: number | null;
+    varieties: Array<{
+      name: string;
+      bagSizes: Array<{
+        name: string;
+        locationId: string;
+        incomingOrderId: string;
+        varietyName: string;
+        quantityBefore: number;
+        quantityRemoved: number;
+        quantityAfter: number;
+        approxWeight: number | null;
+        floor?: string;
+        row?: string;
+        chamber?: string;
+      }>;
+    }>;
+    totalBags: number | null;
+    totalWeight: number | null;
+    createdById: string | null;
+    approvedById: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    farmerStorageLink?: {
+      id: string;
+      farmer: {
+        id: string;
+        name: string;
+        address: string;
+        mobileNumber: string;
+        imageUrl: string | null;
+      };
+    };
+    createdBy?: {
+      id: string;
+      name: string;
+    } | null;
+  }) {
+    const locationIds = (order.varieties || [])
+      .flatMap((v) => (v.bagSizes || []).map((b) => b.locationId))
+      .filter((id): id is string => Boolean(id));
+
+    if (locationIds.length === 0) {
+      return order;
+    }
+
+    const locations = await this.fastify.prisma.location.findMany({
+      where: { id: { in: locationIds } },
+      select: { id: true, floor: true, row: true, chamber: true },
+    });
+
+    const locationMap = new Map(locations.map((loc) => [loc.id, loc]));
+
+    const enrichedVarieties = (order.varieties || []).map((variety) => ({
+      ...variety,
+      bagSizes: (variety.bagSizes || []).map((bag) => {
+        const loc = locationMap.get(bag.locationId);
+        return {
+          ...bag,
+          ...(loc
+            ? {
+                floor: loc.floor,
+                row: loc.row,
+                chamber: loc.chamber,
+              }
+            : {}),
+        };
+      }),
+    }));
+
+    return { ...order, varieties: enrichedVarieties };
   }
 
   /**
@@ -1330,9 +1426,10 @@ export class OutgoingOrderService {
     } | null;
   }): OutgoingOrderResponse {
     // Convert null approxWeight to undefined for type compatibility
+    // Include floor, row, chamber if they exist (from enrichment)
     const processedVarieties: VarietySnapshotInput[] = (order.varieties || []).map((variety) => ({
       name: variety.name,
-      bagSizes: variety.bagSizes.map((bagSize) => ({
+      bagSizes: variety.bagSizes.map((bagSize: any) => ({
         name: bagSize.name,
         locationId: bagSize.locationId,
         incomingOrderId: bagSize.incomingOrderId,
@@ -1341,6 +1438,9 @@ export class OutgoingOrderService {
         quantityRemoved: bagSize.quantityRemoved,
         quantityAfter: bagSize.quantityAfter,
         approxWeight: bagSize.approxWeight ?? undefined,
+        ...(bagSize.floor && { floor: bagSize.floor }),
+        ...(bagSize.row && { row: bagSize.row }),
+        ...(bagSize.chamber && { chamber: bagSize.chamber }),
       })),
     }));
 

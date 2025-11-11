@@ -3,12 +3,14 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import cookie from '@fastify/cookie';
+import helmet from '@fastify/helmet';
 import prismaPlugin from './plugins/prisma.js';
 import { config } from 'dotenv';
 import coldStorageRoutes from '@/modules/base/cold-storage/v1/routes/cold-storage.routes.js';
 import storeAdminRoutes from './modules/base/store-admin/v1/routes/store-admin.routes.js';
 import rbacRoutes from './modules/base/rbac/v1/routes/rbac.routes.js';
 import incomingOrderRoutes from './modules/base/incoming-orders/v1/routes/incoming-orders.routes.js';
+import outgoingOrderRoutes from './modules/base/outgoing-orders/v1/index.js';
 config();
 
 export const buildApp = async (): Promise<FastifyInstance> => {
@@ -28,10 +30,25 @@ export const buildApp = async (): Promise<FastifyInstance> => {
     },
   });
 
+  // Register security headers (helmet)
+  await fastify.register(helmet, {
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+      },
+    },
+    crossOriginEmbedderPolicy: false, // Allow CORS for API
+  });
+
   // Register CORS
   await fastify.register(cors, {
-    origin: process.env.CORS_ORIGIN || '*',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    origin: process.env.CORS_ORIGIN || 'http://localhost:3000', // must NOT be '*'
+    credentials: true, // ✅ allow cookies
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
   // Register Prisma plugin
@@ -50,6 +67,7 @@ export const buildApp = async (): Promise<FastifyInstance> => {
   await fastify.register(storeAdminRoutes, { prefix: '/api/v1/base/store-admin' });
   await fastify.register(rbacRoutes, { prefix: '/api/v1/base/rbac' });
   await fastify.register(incomingOrderRoutes, { prefix: '/api/v1/base/incoming-orders' });
+  await fastify.register(outgoingOrderRoutes, { prefix: '/api/v1/base/outgoing-orders' });
 
   // Health check endpoint
   fastify.get('/health', () => ({

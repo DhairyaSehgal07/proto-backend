@@ -9,8 +9,13 @@ export const createStoreAdminSchema = z.object({
 
   name: z.string().min(2, 'Name must be at least 2 characters long'),
   personalAddress: z.string().min(5, 'Address is required').optional(),
-  mobileNumber: z.string().regex(/^[0-9]{10}$/, 'Mobile number must be 10 digits'),
-  password: z.string().min(6, 'Password must be at least 6 characters long'),
+  mobileNumber: z
+    .string()
+    .regex(
+      /^\+[1-9]\d{1,3}\d{7,15}$/,
+      'Mobile number must include country code (e.g., +919876543210)'
+    ),
+  password: z.string().min(8, 'Password must be at least 8 characters long'),
 
   role: RoleEnum.optional().default('Manager'),
   isVerified: z.boolean().optional().default(true),
@@ -42,11 +47,26 @@ export const storeAdminQuerySchema = z.object({
 
 /**
  * LOGIN schema
+ * Supports both formats for backward compatibility:
+ * - New format: +[country code][number] (e.g., +919876543210)
+ * - Old format: 10 digits (e.g., 9876543210)
  */
 export const loginStoreAdminSchema = z.object({
-  mobileNumber: z.string().regex(/^[0-9]{10}$/, 'Mobile number must be 10 digits'),
+  mobileNumber: z
+    .string()
+    .refine(
+      (val) => /^\+[1-9]\d{1,3}\d{7,15}$/.test(val) || /^[0-9]{10}$/.test(val),
+      'Mobile number must be either +[country code][number] (e.g., +919876543210) or 10 digits (e.g., 9876543210)'
+    ),
   password: z.string().min(1, 'Password is required'),
   isMobile: z.boolean().optional().default(false),
+});
+
+/**
+ * REFRESH TOKEN schema
+ */
+export const refreshTokenSchema = z.object({
+  refreshToken: z.string().min(1, 'Refresh token is required'),
 });
 
 /**
@@ -66,6 +86,20 @@ export const registerFarmerSchema = z.object({
 });
 
 /**
+ * DAYBOOK QUERY schema — for daybook route
+ */
+export const daybookQuerySchema = z.object({
+  type: z.enum(['all', 'incoming', 'outgoing']).optional().default('all'),
+  commodity: z
+    .enum(['POTATO', 'ONION', 'GARLIC', 'TOMATO', 'CARROT', 'APPLE', 'SWEETS', 'OTHER'])
+    .optional(),
+  search: z.string().optional(),
+  sortBy: z.enum(['latest', 'oldest']).optional().default('latest'),
+  page: z.coerce.number().min(1).optional().default(1),
+  limit: z.coerce.number().min(1).max(100).optional().default(10),
+});
+
+/**
  * Type Inference (for controller/service layers)
  */
 export type CreateStoreAdminInput = z.infer<typeof createStoreAdminSchema>;
@@ -73,4 +107,6 @@ export type UpdateStoreAdminInput = z.infer<typeof updateStoreAdminSchema>;
 export type StoreAdminIdParam = z.infer<typeof storeAdminIdParamSchema>;
 export type StoreAdminQuery = z.infer<typeof storeAdminQuerySchema>;
 export type LoginStoreAdminInput = z.infer<typeof loginStoreAdminSchema>;
+export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>;
 export type RegisterFarmerInput = z.infer<typeof registerFarmerSchema>;
+export type DaybookQuery = z.infer<typeof daybookQuerySchema>;

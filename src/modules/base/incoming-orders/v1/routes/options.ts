@@ -44,6 +44,9 @@ export const createOptions = {
                               quantityCurr: { type: 'number' },
                               approxWeight: { type: ['number', 'null'] },
                               locationId: { type: 'string' },
+                              floor: { type: ['string', 'null'] },
+                              row: { type: ['string', 'null'] },
+                              chamber: { type: ['string', 'null'] },
                             },
                           },
                         },
@@ -52,6 +55,7 @@ export const createOptions = {
                   },
                   createdAt: { type: 'string', format: 'date-time' },
                   updatedAt: { type: 'string', format: 'date-time' },
+                  createdById: { type: ['string', 'null'] },
                   farmerStorageLink: {
                     type: 'object',
                     properties: {
@@ -66,6 +70,13 @@ export const createOptions = {
                           imageUrl: { type: ['string', 'null'] },
                         },
                       },
+                    },
+                  },
+                  createdBy: {
+                    type: ['object', 'null'],
+                    properties: {
+                      id: { type: 'string' },
+                      name: { type: 'string' },
                     },
                   },
                 },
@@ -159,6 +170,9 @@ export const listOptions = {
                             quantityCurr: { type: 'number' },
                             approxWeight: { type: ['number', 'null'] },
                             locationId: { type: 'string' },
+                            floor: { type: ['string', 'null'] },
+                            row: { type: ['string', 'null'] },
+                            chamber: { type: ['string', 'null'] },
                           },
                           required: ['name', 'quantityInit', 'quantityCurr', 'locationId'],
                         },
@@ -169,6 +183,7 @@ export const listOptions = {
                 },
                 createdAt: { type: 'string', format: 'date-time' },
                 updatedAt: { type: 'string', format: 'date-time' },
+                createdById: { type: ['string', 'null'] },
                 farmerStorageLink: {
                   type: 'object',
                   properties: {
@@ -186,6 +201,13 @@ export const listOptions = {
                     },
                   },
                   required: ['id', 'farmer'],
+                },
+                createdBy: {
+                  type: ['object', 'null'],
+                  properties: {
+                    id: { type: 'string' },
+                    name: { type: 'string' },
+                  },
                 },
               },
               required: [
@@ -262,6 +284,9 @@ export const getByFarmerOptions = {
                             quantityCurr: { type: 'number' },
                             approxWeight: { type: ['number', 'null'] },
                             locationId: { type: 'string' },
+                            floor: { type: ['string', 'null'] },
+                            row: { type: ['string', 'null'] },
+                            chamber: { type: ['string', 'null'] },
                           },
                         },
                       },
@@ -270,6 +295,7 @@ export const getByFarmerOptions = {
                 },
                 createdAt: { type: 'string', format: 'date-time' },
                 updatedAt: { type: 'string', format: 'date-time' },
+                createdById: { type: ['string', 'null'] },
                 farmerStorageLink: {
                   type: 'object',
                   properties: {
@@ -284,6 +310,13 @@ export const getByFarmerOptions = {
                         imageUrl: { type: ['string', 'null'] },
                       },
                     },
+                  },
+                },
+                createdBy: {
+                  type: ['object', 'null'],
+                  properties: {
+                    id: { type: 'string' },
+                    name: { type: 'string' },
                   },
                 },
               },
@@ -328,6 +361,7 @@ export const getByIdOptions = {
               gatePassNumber: { type: 'number' },
               remarks: { type: ['string', 'null'] },
               currentStockAtThatTime: { type: ['number', 'null'] },
+
               varieties: {
                 type: 'array',
                 items: {
@@ -344,14 +378,22 @@ export const getByIdOptions = {
                           quantityCurr: { type: 'number' },
                           approxWeight: { type: ['number', 'null'] },
                           locationId: { type: 'string' },
+                          floor: { type: ['string', 'null'] },
+                          row: { type: ['string', 'null'] },
+                          chamber: { type: ['string', 'null'] },
                         },
+                        required: ['name', 'quantityInit', 'quantityCurr', 'locationId'],
                       },
                     },
                   },
+                  required: ['name', 'bagSizes'],
                 },
               },
+
               createdAt: { type: 'string', format: 'date-time' },
               updatedAt: { type: 'string', format: 'date-time' },
+              createdById: { type: ['string', 'null'] },
+
               farmerStorageLink: {
                 type: 'object',
                 properties: {
@@ -365,10 +407,30 @@ export const getByIdOptions = {
                       mobileNumber: { type: 'string' },
                       imageUrl: { type: ['string', 'null'] },
                     },
+                    required: ['id', 'name', 'address', 'mobileNumber'],
                   },
+                },
+                required: ['id', 'farmer'],
+              },
+              createdBy: {
+                type: ['object', 'null'],
+                properties: {
+                  id: { type: 'string' },
+                  name: { type: 'string' },
                 },
               },
             },
+            required: [
+              'id',
+              'farmerStorageLinkId',
+              'commodity',
+              'gatePassType',
+              'gatePassNumber',
+              'varieties',
+              'createdAt',
+              'updatedAt',
+              'farmerStorageLink',
+            ],
           },
         },
       },
@@ -433,6 +495,9 @@ export const updateOptions = {
                               quantityCurr: { type: 'number' },
                               approxWeight: { type: ['number', 'null'] },
                               locationId: { type: 'string' },
+                              floor: { type: ['string', 'null'] },
+                              row: { type: ['string', 'null'] },
+                              chamber: { type: ['string', 'null'] },
                             },
                           },
                         },
@@ -441,6 +506,7 @@ export const updateOptions = {
                   },
                   createdAt: { type: 'string', format: 'date-time' },
                   updatedAt: { type: 'string', format: 'date-time' },
+                  createdById: { type: ['string', 'null'] },
                   farmerStorageLink: {
                     type: 'object',
                     properties: {
@@ -455,6 +521,13 @@ export const updateOptions = {
                           imageUrl: { type: ['string', 'null'] },
                         },
                       },
+                    },
+                  },
+                  createdBy: {
+                    type: ['object', 'null'],
+                    properties: {
+                      id: { type: 'string' },
+                      name: { type: 'string' },
                     },
                   },
                 },

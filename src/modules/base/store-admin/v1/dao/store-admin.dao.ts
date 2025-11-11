@@ -10,6 +10,19 @@ type StoreAdminWithRelations = PrismaTypes.StoreAdminGetPayload<{
 }>;
 
 /**
+ * Type for StoreAdmin with coldStorage and preferences included (for login)
+ */
+type StoreAdminWithColdStorageAndPreferences = PrismaTypes.StoreAdminGetPayload<{
+  include: {
+    coldStorage: {
+      include: {
+        preferences: true;
+      };
+    };
+  };
+}>;
+
+/**
  * Data Access Object for StoreAdmin
  * Handles all database operations
  */
@@ -144,17 +157,39 @@ export class StoreAdminDAO {
   /**
    * Find store admin by mobile number
    * Note: Mobile number is unique per cold storage, but may exist across multiple cold storages
+   * Supports searching with or without country code
    */
-  async findByMobileNumber(mobileNumber: string): Promise<StoreAdminWithRelations | null> {
+  async findByMobileNumber(
+    mobileNumber: string
+  ): Promise<StoreAdminWithColdStorageAndPreferences | null> {
     try {
-      return await this.fastify.prisma.storeAdmin.findFirst({
+      // Ensure we're searching with the exact format stored in database (no country code)
+      const searchNumber = mobileNumber.replace(/^\+\d{1,3}/, '').trim();
+
+      this.fastify.log.debug(
+        { original: mobileNumber, searchNumber },
+        'Searching for store admin by mobile number'
+      );
+
+      const result = await this.fastify.prisma.storeAdmin.findFirst({
         where: {
-          mobileNumber,
+          mobileNumber: searchNumber,
         },
         include: {
-          coldStorage: true,
+          coldStorage: {
+            include: {
+              preferences: true,
+            },
+          },
         },
       });
+
+      this.fastify.log.debug(
+        { mobileNumber: searchNumber, found: Boolean(result) },
+        'Store admin lookup result'
+      );
+
+      return result;
     } catch (error) {
       this.fastify.log.error(error, `Error in findByMobileNumber: ${mobileNumber}`);
       throw error;

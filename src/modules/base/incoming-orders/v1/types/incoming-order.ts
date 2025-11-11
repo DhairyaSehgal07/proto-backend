@@ -79,10 +79,12 @@ export interface IncomingOrderResponse {
   remarks: string | null;
   currentStockAtThatTime: number | null;
   varieties: ProcessedVariety[];
+  createdById: string | null;
   createdAt: Date;
   updatedAt: Date;
   farmerStorageLink?: {
     id: string;
+    accountNumber: number;
     farmer: {
       id: string;
       name: string;
@@ -90,6 +92,10 @@ export interface IncomingOrderResponse {
       mobileNumber: string;
       imageUrl: string | null;
     };
+  };
+  createdBy?: {
+    id: string;
+    name: string;
   };
 }
 

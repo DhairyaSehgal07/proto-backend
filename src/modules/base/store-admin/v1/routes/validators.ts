@@ -7,6 +7,7 @@ import {
   storeAdminQuerySchema,
   loginStoreAdminSchema,
   registerFarmerSchema,
+  daybookQuerySchema,
 } from '../schemas/store-admin.schema.js';
 
 /**
@@ -129,10 +130,46 @@ export function validateParams(
 /**
  * Query validator (for list/search)
  */
-export function validateQuery(request: FastifyRequest, reply: FastifyReply): void {
+export function validateQuery(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  done: (err?: Error) => void
+): void {
   try {
     const validated = storeAdminQuerySchema.parse(request.query);
     request.query = validated;
+    done();
+  } catch (error) {
+    if (error instanceof ZodError) {
+      reply.code(400).send({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid query parameters',
+          details: error.issues.map((e) => ({
+            path: e.path.join('.'),
+            message: e.message,
+          })),
+        },
+      });
+      return;
+    }
+    throw error;
+  }
+}
+
+/**
+ * Daybook query validator
+ */
+export function validateDaybookQuery(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  done: (err?: Error) => void
+): void {
+  try {
+    const validated = daybookQuerySchema.parse(request.query);
+    request.query = validated;
+    done();
   } catch (error) {
     if (error instanceof ZodError) {
       reply.code(400).send({

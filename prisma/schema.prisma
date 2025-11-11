@@ -135,14 +135,20 @@ model StoreAdmin {
   role            Role    @default(Manager)
   isVerified      Boolean @default(false)
 
+  // Security fields
+  failedLoginAttempts Int      @default(0)
+  lockedUntil         DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  linkedLinks    FarmerStorageLink[] @relation("LinkedByAdmin")
-  createdOrders  OutgoingOrder[]     @relation("CreatedByAdmin")
-  approvedOrders OutgoingOrder[]     @relation("ApprovedByAdmin")
-  createdRoles   RolePermission[]    @relation("CreatedByRoleAdmin")
+  linkedLinks         FarmerStorageLink[] @relation("LinkedByAdmin")
+  createdOrders       OutgoingOrder[]     @relation("CreatedByAdmin")
+  approvedOrders      OutgoingOrder[]     @relation("ApprovedByAdmin")
+  createdIncomingOrders IncomingOrder[]   @relation("CreatedIncomingByAdmin")
+  createdRoles        RolePermission[]    @relation("CreatedByRoleAdmin")
+  sessions            Session[]
 
   @@unique([coldStorageId, mobileNumber]) // Avoid duplicates within same tenant
   @@index([mobileNumber])
@@ -216,6 +222,10 @@ model IncomingOrder {
   coldStorageId String?      @db.ObjectId
   coldStorage   ColdStorage? @relation(fields: [coldStorageId], references: [id], onDelete: NoAction)
 
+ // ✅ New field for manual voucher date
+  date DateTime?
+  createdById  String?     @db.ObjectId
+  createdBy    StoreAdmin? @relation("CreatedIncomingByAdmin", fields: [createdById], references: [id], onDelete: NoAction)
   commodity              Commodity
   gatePassType           GatePassType @default(RECEIPT)
   gatePassNumber         Int
@@ -261,6 +271,9 @@ model OutgoingOrder {
   gatePassNumber         Int
   remarks                String?
   currentStockAtThatTime Float?
+
+   // ✅ New field for manual voucher date
+  date DateTime?
 
   varieties   VarietySnapshot[] // Can be empty array for null vouchers (paper tampering simulation)
   totalBags   Int?              @default(0)
@@ -325,4 +338,41 @@ model RolePermission {
 type ResourcePermission {
   resource   String
   operations String[]
+}
+
+// 🔐 Session (for refresh tokens)
+model Session {
+  id        String     @id @default(auto()) @map("_id") @db.ObjectId
+  adminId   String     @db.ObjectId
+  admin     StoreAdmin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  refreshToken String   @unique
+  deviceInfo   String?  // Device/user agent info
+  ipAddress    String?  // IP address for audit
+  expiresAt    DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([adminId])
+  @@index([expiresAt])
+}
+
+// 📋 Login Audit Trail
+model LoginAudit {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  adminId   String?  @db.ObjectId
+  mobileNumber String
+
+  success      Boolean
+  ipAddress    String?
+  deviceInfo   String?
+  failureReason String?
+
+  createdAt DateTime @default(now())
+
+  @@index([adminId])
+  @@index([mobileNumber])
+  @@index([createdAt])
+  @@index([success])
 }

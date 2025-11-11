@@ -214,6 +214,7 @@ export class IncomingOrderService {
         remarks: data.remarks || null,
         currentStockAtThatTime: finalCurrentStock,
         varieties: processedVarieties || [], // empty array for null vouchers
+        createdById: adminId,
       },
       include: {
         farmerStorageLink: {
@@ -229,10 +230,18 @@ export class IncomingOrderService {
             },
           },
         },
+        createdBy: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
     });
 
-    return this.mapToResponse(order);
+    const enrichedOrder = await this.enrichOrderWithLocations(order as any);
+
+    return this.mapToResponse(enrichedOrder as any);
   }
 
   /**
@@ -292,13 +301,23 @@ export class IncomingOrderService {
               },
             },
           },
+          createdBy: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
         },
       }),
       this.fastify.prisma.incomingOrder.count({ where }),
     ]);
 
+    const enrichedOrders = await Promise.all(
+      orders.map((order) => this.enrichOrderWithLocations(order as any))
+    );
+
     return {
-      data: orders.map((order) => this.mapToResponse(order)),
+      data: enrichedOrders.map((order) => this.mapToResponse(order as any)),
       count,
     };
   }
@@ -358,13 +377,23 @@ export class IncomingOrderService {
               },
             },
           },
+          createdBy: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
         },
       }),
       this.fastify.prisma.incomingOrder.count({ where }),
     ]);
 
+    const enrichedOrders = await Promise.all(
+      orders.map((order) => this.enrichOrderWithLocations(order as any))
+    );
+
     return {
-      data: orders.map((order) => this.mapToResponse(order)),
+      data: enrichedOrders.map((order) => this.mapToResponse(order as any)),
       count,
     };
   }
@@ -389,18 +418,25 @@ export class IncomingOrderService {
             },
           },
         },
+        coldStorage: {
+          select: { id: true },
+        },
+        createdBy: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
     });
 
-    if (!order) {
-      throw new IncomingOrderNotFoundError(id);
-    }
-
-    if (order.coldStorageId !== coldStorageId) {
+    if (!order) throw new IncomingOrderNotFoundError(id);
+    if (order.coldStorageId !== coldStorageId)
       throw new IncomingOrderValidationError('Order does not belong to this cold storage');
-    }
 
-    return this.mapToResponse(order);
+    const enrichedOrder = await this.enrichOrderWithLocations(order as any);
+
+    return this.mapToResponse(enrichedOrder as any);
   }
 
   /**
@@ -658,6 +694,12 @@ export class IncomingOrderService {
             },
           },
         },
+        createdBy: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
     });
 
@@ -674,7 +716,9 @@ export class IncomingOrderService {
       );
     }
 
-    return this.mapToResponse(updatedOrder);
+    const enrichedOrder = await this.enrichOrderWithLocations(updatedOrder as any);
+
+    return this.mapToResponse(enrichedOrder as any);
   }
 
   /**
@@ -709,6 +753,69 @@ export class IncomingOrderService {
   }
 
   /**
+   * Enrich order varieties with location data (floor, row, chamber)
+   */
+  private async enrichOrderWithLocations(
+    order: PrismaTypes.IncomingOrderGetPayload<{
+      include: {
+        farmerStorageLink: {
+          include: {
+            farmer: {
+              select: {
+                id: true;
+                name: true;
+                address: true;
+                mobileNumber: true;
+                imageUrl: true;
+              };
+            };
+          };
+        };
+        createdBy?: {
+          select: {
+            id: true;
+            name: true;
+          };
+        };
+      };
+    }>
+  ) {
+    const locationIds = (order.varieties as any[])
+      .flatMap((v) => (v.bagSizes || []).map((b: any) => b.locationId))
+      .filter((id): id is string => Boolean(id));
+
+    if (locationIds.length === 0) {
+      return order;
+    }
+
+    const locations = await this.fastify.prisma.location.findMany({
+      where: { id: { in: locationIds } },
+      select: { id: true, floor: true, row: true, chamber: true },
+    });
+
+    const locationMap = new Map(locations.map((loc) => [loc.id, loc]));
+
+    const enrichedVarieties = (order.varieties as any[]).map((variety) => ({
+      ...variety,
+      bagSizes: (variety.bagSizes || []).map((bag: any) => {
+        const loc = locationMap.get(bag.locationId);
+        return {
+          ...bag,
+          ...(loc
+            ? {
+                floor: loc.floor,
+                row: loc.row,
+                chamber: loc.chamber,
+              }
+            : {}),
+        };
+      }),
+    }));
+
+    return { ...order, varieties: enrichedVarieties } as typeof order;
+  }
+
+  /**
    * Map database model to response DTO
    */
   private mapToResponse(
@@ -727,6 +834,12 @@ export class IncomingOrderService {
             };
           };
         };
+        createdBy?: {
+          select: {
+            id: true;
+            name: true;
+          };
+        };
       };
     }>
   ): IncomingOrderResponse {
@@ -742,9 +855,11 @@ export class IncomingOrderService {
       varieties: order.varieties as ProcessedVariety[],
       createdAt: order.createdAt,
       updatedAt: order.updatedAt,
+      createdById: order.createdById,
       farmerStorageLink: order.farmerStorageLink
         ? {
             id: order.farmerStorageLink.id,
+            accountNumber: order.farmerStorageLink.accountNumber,
             farmer: {
               id: order.farmerStorageLink.farmer.id,
               name: order.farmerStorageLink.farmer.name,
@@ -752,6 +867,12 @@ export class IncomingOrderService {
               mobileNumber: order.farmerStorageLink.farmer.mobileNumber,
               imageUrl: order.farmerStorageLink.farmer.imageUrl,
             },
+          }
+        : undefined,
+      createdBy: order.createdBy
+        ? {
+            id: order.createdBy.id,
+            name: order.createdBy.name,
           }
         : undefined,
     };

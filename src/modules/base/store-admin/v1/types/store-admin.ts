@@ -63,11 +63,58 @@ export interface LoginStoreAdminRequest {
 }
 
 /**
+ * Preferences type for API responses (excludes internal fields)
+ */
+export interface Preferences {
+  bagSizes: string[];
+  commodities: string[];
+  generation: string | null;
+  rouging: string | null;
+  tuberType: string | null;
+  grader: string | null;
+}
+
+/**
+ * Cold Storage response type with preferences
+ */
+export interface ColdStorageResponse {
+  id: string;
+  name: string;
+  address: string;
+  mobileNumber: string;
+  capacity: number;
+  imageUrl: string | null;
+  isPaid: boolean;
+  isActive: boolean;
+  plan: 'Basic' | 'Pro' | 'Enterprise';
+  preferences: Preferences | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
  * Login response type
  */
 export interface LoginStoreAdminResponse {
   admin: StoreAdminResponse;
-  token: string;
+  coldStorage: ColdStorageResponse;
+  accessToken: string;
+  refreshToken: string;
+}
+
+/**
+ * Refresh token request type
+ */
+export interface RefreshTokenRequest {
+  refreshToken: string;
+}
+
+/**
+ * Refresh token response type
+ */
+export interface RefreshTokenResponse {
+  accessToken: string;
+  refreshToken: string;
 }
 
 /**
@@ -105,5 +152,72 @@ export interface RegisterFarmerResponse {
     notes: string | null;
     createdAt: Date;
     updatedAt: Date;
+  };
+}
+
+/**
+ * Daybook order item (union of incoming and outgoing orders)
+ */
+export interface DaybookOrderItem {
+  id: string;
+  type: 'incoming' | 'outgoing';
+  farmerStorageLinkId: string;
+  coldStorageId: string | null;
+  commodity: string;
+  gatePassType: string;
+  gatePassNumber: number;
+  remarks: string | null;
+  currentStockAtThatTime: number | null;
+  createdAt: Date;
+  updatedAt: Date;
+  farmerStorageLink?: {
+    id: string;
+    accountNumber?: number;
+    farmer: {
+      id: string;
+      name: string;
+      address: string;
+      mobileNumber: string;
+      imageUrl: string | null;
+    };
+  };
+  // Incoming order specific fields
+  varieties?: Array<{
+    name: string;
+    bagSizes: Array<{
+      name: string;
+      quantityInit: number;
+      quantityCurr: number;
+      approxWeight?: number;
+      locationId: string;
+      incomingOrderId?: string;
+      floor?: string;
+      row?: string;
+      chamber?: string;
+    }>;
+  }>;
+  // Outgoing order specific fields
+  totalBags?: number | null;
+  totalWeight?: number | null;
+  createdBy?: {
+    id: string;
+    name: string;
+  };
+}
+
+/**
+ * Daybook response type
+ */
+export interface DaybookResponse {
+  data: DaybookOrderItem[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+    itemsPerPage: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+    nextPage: number | null;
+    previousPage: number | null;
   };
 }

@@ -14,13 +14,11 @@ declare module 'fastify' {
 }
 
 /**
- * JWT payload structure
+ * JWT payload structure (minimal for security)
+ * Only includes essential fields - other data fetched from database
  */
 export interface JWTPayload {
   adminId: string;
-  adminName: string;
-  coldStorageId: string;
-  coldStorageImageUrl: string | null;
   role: string;
   iat?: number;
   exp?: number;
@@ -42,8 +40,8 @@ export async function authenticateAdmin(
     if (authHeader && authHeader.startsWith('Bearer ')) {
       token = authHeader.substring(7); // Remove 'Bearer ' prefix
     } else {
-      // Check for token in cookie (cookie name is 'jwt')
-      token = request.cookies.jwt;
+      // Check for token in cookie (cookie name is 'accessToken' for new implementation, 'jwt' for backward compatibility)
+      token = request.cookies.accessToken || request.cookies.jwt;
     }
 
     if (!token) {

@@ -9,6 +9,7 @@ import type {
   CreateStoreAdminRequest,
   UpdateStoreAdminRequest,
   LoginStoreAdminRequest,
+  RefreshTokenRequest,
   RegisterFarmerRequest,
 } from '../types/store-admin.js';
 
@@ -19,6 +20,7 @@ import type {
   UpdateStoreAdminInput,
   LoginStoreAdminInput,
   RegisterFarmerInput,
+  DaybookQuery,
 } from '../schemas/store-admin.schema.js';
 
 // Route-level types
@@ -51,6 +53,10 @@ interface RegisterFarmerRequestParams {
   Body: RegisterFarmerInput;
 }
 
+interface DaybookRequestParams {
+  Querystring: DaybookQuery;
+}
+
 /**
  * Controller for StoreAdmin endpoints
  */
@@ -63,6 +69,7 @@ export class StoreAdminController {
 
   /**
    * POST /store-admin/login - Login store admin
+   * Security: Uses refresh token pattern, tokens stored securely
    */
   async login(
     request: FastifyRequest<LoginStoreAdminRequestParams>,
@@ -72,18 +79,36 @@ export class StoreAdminController {
       const loginData = request.body as LoginStoreAdminRequest;
       const isMobile = loginData.isMobile ?? false;
 
-      const result = await this.service.login(loginData, request.server);
+      const result = await this.service.login(loginData, request.server, request);
 
-      // If mobile, send token in response; otherwise set it in cookie
+      // For mobile: Store refresh token securely, return access token
+      // For web: Use HTTP-only cookies for both tokens
       if (isMobile) {
+        // Mobile: Return access token in response (short-lived, 15 minutes)
+        // Refresh token should be stored securely in device storage (not localStorage)
         reply.code(200).send({
           success: true,
           message: 'Login successful',
-          data: result,
+          data: {
+            admin: result.admin,
+            coldStorage: result.coldStorage,
+            accessToken: result.accessToken,
+            refreshToken: result.refreshToken, // Client must store this securely
+          },
         });
       } else {
-        // Set token in HTTP-only cookie
-        reply.setCookie('jwt', result.token, {
+        // Web: Store both tokens in HTTP-only cookies
+        // Access token cookie
+        reply.setCookie('accessToken', result.accessToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+          path: '/',
+          maxAge: 15 * 60, // 15 minutes in seconds
+        });
+
+        // Refresh token cookie
+        reply.setCookie('refreshToken', result.refreshToken, {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'strict',
@@ -91,14 +116,120 @@ export class StoreAdminController {
           maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
         });
 
-        // Send response without token
-        const { token: _token, ...dataWithoutToken } = result;
+        // Send response without tokens
         reply.code(200).send({
           success: true,
           message: 'Login successful',
-          data: dataWithoutToken,
+          data: {
+            admin: result.admin,
+            coldStorage: result.coldStorage,
+          },
         });
       }
+    } catch (error) {
+      this.handleError(error, reply);
+    }
+  }
+
+  /**
+   * POST /store-admin/refresh - Refresh access token
+   */
+  async refreshToken(
+    request: FastifyRequest<{ Body: RefreshTokenRequest }>,
+    reply: FastifyReply
+  ): Promise<void> {
+    try {
+      const refreshTokenData = request.body;
+
+      // Get refresh token from body or cookie
+      const refreshToken = refreshTokenData.refreshToken || request.cookies.refreshToken;
+
+      if (!refreshToken) {
+        reply.code(400).send({
+          success: false,
+          error: {
+            code: 'REFRESH_TOKEN_REQUIRED',
+            message: 'Refresh token is required',
+          },
+        });
+        return;
+      }
+
+      const result = await this.service.refreshToken({ refreshToken }, request.server, request);
+
+      const isMobile = request.headers['user-agent']?.includes('Mobile') ?? false;
+
+      if (isMobile) {
+        // Mobile: Return new tokens
+        reply.code(200).send({
+          success: true,
+          data: result,
+        });
+      } else {
+        // Web: Update cookies
+        reply.setCookie('accessToken', result.accessToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+          path: '/',
+          maxAge: 15 * 60, // 15 minutes
+        });
+
+        if (result.refreshToken !== refreshToken) {
+          // If refresh token was rotated, update cookie
+          reply.setCookie('refreshToken', result.refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            path: '/',
+            maxAge: 7 * 24 * 60 * 60, // 7 days
+          });
+        }
+
+        reply.code(200).send({
+          success: true,
+          message: 'Token refreshed successfully',
+        });
+      }
+    } catch (error) {
+      this.handleError(error, reply);
+    }
+  }
+
+  /**
+   * POST /store-admin/logout - Logout store admin
+   * Invalidates refresh token from database
+   */
+  async logout(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      // Get refresh token from cookie or body
+      const refreshToken =
+        request.cookies.refreshToken || (request.body as { refreshToken?: string })?.refreshToken;
+
+      if (refreshToken) {
+        // Invalidate refresh token in database
+        await this.service.logout(refreshToken);
+      }
+
+      // Clear cookies
+      reply.clearCookie('accessToken', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        path: '/',
+      });
+
+      reply.clearCookie('refreshToken', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        path: '/',
+      });
+
+      reply.code(200).send({
+        success: true,
+        message: 'Logout successful',
+      });
     } catch (error) {
       this.handleError(error, reply);
     }
@@ -263,6 +394,58 @@ export class StoreAdminController {
         success: true,
         message: 'Farmer successfully linked to this cold storage',
         data: result,
+      });
+    } catch (error) {
+      this.handleError(error, reply);
+    }
+  }
+
+  /**
+   * GET /store-admin/daybook - Get daybook orders (incoming and outgoing)
+   */
+  async getDaybook(
+    request: FastifyRequest<DaybookRequestParams>,
+    reply: FastifyReply
+  ): Promise<void> {
+    try {
+      if (!request.admin) {
+        reply.code(401).send({
+          success: false,
+          error: {
+            code: 'AUTHENTICATION_REQUIRED',
+            message: 'Authentication required',
+          },
+        });
+        return;
+      }
+
+      if (!request.admin.coldStorageId) {
+        reply.code(400).send({
+          success: false,
+          error: {
+            code: 'MISSING_COLD_STORAGE',
+            message: 'Missing cold storage context',
+          },
+        });
+        return;
+      }
+
+      const { type, commodity, search, sortBy, page, limit } = request.query;
+
+      const result = await this.service.getDaybook(request.admin.coldStorageId, {
+        type,
+        commodity,
+        search,
+        sortBy,
+        page,
+        limit,
+      });
+      console.log('result is: ', result.data[0].varieties?.[0].bagSizes?.[0].incomingOrderId);
+
+      reply.code(200).send({
+        success: true,
+        data: result.data,
+        pagination: result.pagination,
       });
     } catch (error) {
       this.handleError(error, reply);
