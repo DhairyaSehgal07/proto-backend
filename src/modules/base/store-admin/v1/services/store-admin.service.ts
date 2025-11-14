@@ -8,8 +8,6 @@ import type {
   StoreAdminListResponse,
   LoginStoreAdminRequest,
   LoginStoreAdminResponse,
-  RefreshTokenRequest,
-  RefreshTokenResponse,
   RegisterFarmerRequest,
   RegisterFarmerResponse,
   ColdStorageResponse,
@@ -26,7 +24,6 @@ import type { JWTPayload } from '@/core/middleware/auth.middleware.js';
 import {
   validatePassword,
   validateMobileNumber,
-  generateRefreshToken,
   getClientIp,
   getDeviceInfo,
   ACCOUNT_LOCKOUT_CONFIG,
@@ -294,7 +291,7 @@ export class StoreAdminService {
    * Login store admin with security features:
    * - Account lockout after failed attempts
    * - Login audit trail
-   * - Refresh token pattern
+   * - Single JWT token (7 days expiry)
    * - Rate limiting (handled by middleware)
    */
   async login(
@@ -464,30 +461,14 @@ export class StoreAdminService {
       },
     });
 
-    // Generate tokens
-    // Access token: short-lived (15 minutes)
-    const accessTokenPayload: JWTPayload = {
+    // Generate single JWT token with 7 days expiry
+    const tokenPayload: JWTPayload = {
       adminId: storeAdmin.id,
       role: storeAdmin.role,
     };
 
-    const accessToken = fastify.jwt.sign(accessTokenPayload, {
-      expiresIn: process.env.JWT_EXPIRES_IN || '15m',
-    });
-
-    // Refresh token: long-lived (7 days), stored in database
-    const refreshToken = generateRefreshToken();
-    const refreshTokenExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-
-    // Store refresh token in database
-    await this.fastify.prisma.session.create({
-      data: {
-        adminId: storeAdmin.id,
-        refreshToken,
-        deviceInfo,
-        ipAddress,
-        expiresAt: refreshTokenExpiresAt,
-      },
+    const token = fastify.jwt.sign(tokenPayload, {
+      expiresIn: '7d', // 7 days
     });
 
     // Log successful login
@@ -496,82 +477,17 @@ export class StoreAdminService {
     return {
       admin: this.mapToResponse(storeAdmin),
       coldStorage: this.mapColdStorageToResponse(storeAdmin.coldStorage),
-      accessToken,
-      refreshToken,
+      token,
     };
   }
 
   /**
-   * Refresh access token using refresh token
+   * Logout - no database cleanup needed with single token approach
    */
-  async refreshToken(
-    data: RefreshTokenRequest,
-    fastify: FastifyInstance,
-    _request?: FastifyRequest
-  ): Promise<RefreshTokenResponse> {
-    // Find session by refresh token
-    const session = await this.fastify.prisma.session.findUnique({
-      where: { refreshToken: data.refreshToken },
-      include: { admin: { include: { coldStorage: true } } },
-    });
-
-    if (!session) {
-      throw new StoreAdminValidationError('Invalid refresh token');
-    }
-
-    // Check if session is expired
-    if (session.expiresAt < new Date()) {
-      // Delete expired session
-      await this.fastify.prisma.session.delete({ where: { id: session.id } });
-      throw new StoreAdminValidationError('Refresh token has expired. Please login again.');
-    }
-
-    // Check if admin still exists and is verified
-    if (!session.admin || !session.admin.isVerified) {
-      await this.fastify.prisma.session.delete({ where: { id: session.id } });
-      throw new StoreAdminValidationError('Admin account is not verified or has been deleted');
-    }
-
-    // Generate new access token
-    const accessTokenPayload: JWTPayload = {
-      adminId: session.admin.id,
-      role: session.admin.role,
-    };
-
-    const accessToken = fastify.jwt.sign(accessTokenPayload, {
-      expiresIn: process.env.JWT_EXPIRES_IN || '15m',
-    });
-
-    // Optionally rotate refresh token (for better security)
-    // For now, we'll keep the same refresh token
-    // Update session last access time
-    await this.fastify.prisma.session.update({
-      where: { id: session.id },
-      data: { updatedAt: new Date() },
-    });
-
-    return {
-      accessToken,
-      refreshToken: session.refreshToken,
-    };
-  }
-
-  /**
-   * Logout - invalidate refresh token
-   */
-  async logout(refreshToken: string): Promise<void> {
-    await this.fastify.prisma.session.deleteMany({
-      where: { refreshToken },
-    });
-  }
-
-  /**
-   * Logout all sessions for an admin
-   */
-  async logoutAll(adminId: string): Promise<void> {
-    await this.fastify.prisma.session.deleteMany({
-      where: { adminId },
-    });
+  async logout(): Promise<void> {
+    // With single JWT token in cookie, logout is handled by clearing the cookie
+    // No database cleanup needed
+    return Promise.resolve();
   }
 
   /**
@@ -763,7 +679,7 @@ export class StoreAdminService {
     // Map preferences, excluding internal fields (id, createdAt, updatedAt)
     const preferences: Preferences | null = coldStorage.preferences
       ? {
-          bagSizes: coldStorage.preferences.bagSizes ?? [],
+          varieties: coldStorage.preferences.varieties ?? [],
           commodities: coldStorage.preferences.commodities ?? [],
           generation: coldStorage.preferences.generation ?? null,
           rouging: coldStorage.preferences.rouging ?? null,
@@ -892,6 +808,74 @@ export class StoreAdminService {
                 ...bag,
                 ...(loc ? { floor: loc.floor, row: loc.row, chamber: loc.chamber } : {}),
               };
+            }),
+          })),
+        };
+      });
+    };
+
+    // Helper function to enrich daybook orders with incoming order gatePass numbers
+    const enrichDaybookOrdersWithIncomingGatePass = async (
+      orders: DaybookOrderItem[]
+    ): Promise<DaybookOrderItem[]> => {
+      // Collect all incoming order IDs
+      const incomingOrderIds = new Set<string>();
+      orders.forEach((order) => {
+        if (order.varieties) {
+          order.varieties.forEach((variety) => {
+            if (variety.bagSizes) {
+              variety.bagSizes.forEach((bag) => {
+                if (bag.incomingOrderId) {
+                  // Only add if it looks like an ID (ObjectId format), not already a gatePass number
+                  if (
+                    bag.incomingOrderId.length === 24 &&
+                    /^[0-9a-fA-F]{24}$/.test(bag.incomingOrderId)
+                  ) {
+                    incomingOrderIds.add(bag.incomingOrderId);
+                  }
+                }
+              });
+            }
+          });
+        }
+      });
+
+      if (incomingOrderIds.size === 0) {
+        return orders;
+      }
+
+      // Batch fetch all incoming orders to get their gatePass numbers
+      const incomingOrders = await this.fastify.prisma.incomingOrder.findMany({
+        where: { id: { in: Array.from(incomingOrderIds) } },
+        select: { id: true, gatePassNumber: true },
+      });
+
+      const gatePassMap = new Map(
+        incomingOrders.map((io) => [io.id, io.gatePassNumber.toString()])
+      );
+
+      // Enrich orders with gatePass numbers (replace incomingOrderId with gatePass number)
+      return orders.map((order) => {
+        if (!order.varieties) return order;
+        return {
+          ...order,
+          varieties: order.varieties.map((variety) => ({
+            ...variety,
+            bagSizes: variety.bagSizes?.map((bag) => {
+              // If incomingOrderId is an ObjectId, replace with gatePass number
+              if (
+                bag.incomingOrderId &&
+                bag.incomingOrderId.length === 24 &&
+                /^[0-9a-fA-F]{24}$/.test(bag.incomingOrderId)
+              ) {
+                const gatePassNumber = gatePassMap.get(bag.incomingOrderId);
+                return {
+                  ...bag,
+                  incomingOrderId: gatePassNumber ?? bag.incomingOrderId,
+                };
+              }
+              // Already a gatePass number or undefined, keep as is
+              return bag;
             }),
           })),
         };
@@ -1119,8 +1103,14 @@ export class StoreAdminService {
           })),
         }));
 
+        // Enrich with incoming order gatePass numbers
+        const enrichedDaybookOrders = await enrichDaybookOrdersWithIncomingGatePass(daybookOrders);
+
+        // Sort bag sizes
+        sortBagSizes(enrichedDaybookOrders);
+
         return {
-          data: daybookOrders,
+          data: enrichedDaybookOrders,
           pagination: createPaginationMeta(count, page, limit),
         };
       }
@@ -1366,6 +1356,7 @@ export class StoreAdminService {
                     quantityCurr: bag.quantityAfter,
                     approxWeight: bag.approxWeight ?? undefined,
                     locationId: bag.locationId,
+                    incomingOrderId: bag.incomingOrderId,
                   })),
                 })),
               });
@@ -1386,11 +1377,14 @@ export class StoreAdminService {
         // Enrich with locations (batch fetch)
         const enrichedOrders = await enrichOrdersWithLocations(paginatedOrders);
 
+        // Enrich with incoming order gatePass numbers
+        const enrichedDaybookOrders = await enrichDaybookOrdersWithIncomingGatePass(enrichedOrders);
+
         // Sort bag sizes
-        sortBagSizes(enrichedOrders);
+        sortBagSizes(enrichedDaybookOrders);
 
         return {
-          data: enrichedOrders,
+          data: enrichedDaybookOrders,
           pagination: createPaginationMeta(totalCount, page, limit),
         };
       }

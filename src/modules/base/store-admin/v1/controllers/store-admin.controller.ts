@@ -9,7 +9,6 @@ import type {
   CreateStoreAdminRequest,
   UpdateStoreAdminRequest,
   LoginStoreAdminRequest,
-  RefreshTokenRequest,
   RegisterFarmerRequest,
 } from '../types/store-admin.js';
 
@@ -69,128 +68,37 @@ export class StoreAdminController {
 
   /**
    * POST /store-admin/login - Login store admin
-   * Security: Uses refresh token pattern, tokens stored securely
+   * Security: Uses single JWT token stored in HTTP-only cookie
    */
   async login(
     request: FastifyRequest<LoginStoreAdminRequestParams>,
     reply: FastifyReply
   ): Promise<void> {
     try {
-      const loginData = request.body as LoginStoreAdminRequest;
-      const isMobile = loginData.isMobile ?? false;
+      const result = await this.service.login(
+        request.body as LoginStoreAdminRequest,
+        request.server,
+        request
+      );
 
-      const result = await this.service.login(loginData, request.server, request);
+      // Store token in HTTP-only cookie named "jwt"
+      reply.setCookie('jwt', result.token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        path: '/',
+        maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
+      });
 
-      // For mobile: Store refresh token securely, return access token
-      // For web: Use HTTP-only cookies for both tokens
-      if (isMobile) {
-        // Mobile: Return access token in response (short-lived, 15 minutes)
-        // Refresh token should be stored securely in device storage (not localStorage)
-        reply.code(200).send({
-          success: true,
-          message: 'Login successful',
-          data: {
-            admin: result.admin,
-            coldStorage: result.coldStorage,
-            accessToken: result.accessToken,
-            refreshToken: result.refreshToken, // Client must store this securely
-          },
-        });
-      } else {
-        // Web: Store both tokens in HTTP-only cookies
-        // Access token cookie
-        reply.setCookie('accessToken', result.accessToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'strict',
-          path: '/',
-          maxAge: 15 * 60, // 15 minutes in seconds
-        });
-
-        // Refresh token cookie
-        reply.setCookie('refreshToken', result.refreshToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'strict',
-          path: '/',
-          maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
-        });
-
-        // Send response without tokens
-        reply.code(200).send({
-          success: true,
-          message: 'Login successful',
-          data: {
-            admin: result.admin,
-            coldStorage: result.coldStorage,
-          },
-        });
-      }
-    } catch (error) {
-      this.handleError(error, reply);
-    }
-  }
-
-  /**
-   * POST /store-admin/refresh - Refresh access token
-   */
-  async refreshToken(
-    request: FastifyRequest<{ Body: RefreshTokenRequest }>,
-    reply: FastifyReply
-  ): Promise<void> {
-    try {
-      const refreshTokenData = request.body;
-
-      // Get refresh token from body or cookie
-      const refreshToken = refreshTokenData.refreshToken || request.cookies.refreshToken;
-
-      if (!refreshToken) {
-        reply.code(400).send({
-          success: false,
-          error: {
-            code: 'REFRESH_TOKEN_REQUIRED',
-            message: 'Refresh token is required',
-          },
-        });
-        return;
-      }
-
-      const result = await this.service.refreshToken({ refreshToken }, request.server, request);
-
-      const isMobile = request.headers['user-agent']?.includes('Mobile') ?? false;
-
-      if (isMobile) {
-        // Mobile: Return new tokens
-        reply.code(200).send({
-          success: true,
-          data: result,
-        });
-      } else {
-        // Web: Update cookies
-        reply.setCookie('accessToken', result.accessToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'strict',
-          path: '/',
-          maxAge: 15 * 60, // 15 minutes
-        });
-
-        if (result.refreshToken !== refreshToken) {
-          // If refresh token was rotated, update cookie
-          reply.setCookie('refreshToken', result.refreshToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
-            path: '/',
-            maxAge: 7 * 24 * 60 * 60, // 7 days
-          });
-        }
-
-        reply.code(200).send({
-          success: true,
-          message: 'Token refreshed successfully',
-        });
-      }
+      // Send response without token
+      reply.code(200).send({
+        success: true,
+        message: 'Login successful',
+        data: {
+          admin: result.admin,
+          coldStorage: result.coldStorage,
+        },
+      });
     } catch (error) {
       this.handleError(error, reply);
     }
@@ -198,28 +106,14 @@ export class StoreAdminController {
 
   /**
    * POST /store-admin/logout - Logout store admin
-   * Invalidates refresh token from database
+   * Clears JWT cookie
    */
   async logout(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     try {
-      // Get refresh token from cookie or body
-      const refreshToken =
-        request.cookies.refreshToken || (request.body as { refreshToken?: string })?.refreshToken;
+      await this.service.logout();
 
-      if (refreshToken) {
-        // Invalidate refresh token in database
-        await this.service.logout(refreshToken);
-      }
-
-      // Clear cookies
-      reply.clearCookie('accessToken', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        path: '/',
-      });
-
-      reply.clearCookie('refreshToken', {
+      // Clear JWT cookie
+      reply.clearCookie('jwt', {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',
@@ -440,7 +334,6 @@ export class StoreAdminController {
         page,
         limit,
       });
-      console.log('result is: ', result.data[0].varieties?.[0].bagSizes?.[0].incomingOrderId);
 
       reply.code(200).send({
         success: true,

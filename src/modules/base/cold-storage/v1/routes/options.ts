@@ -31,8 +31,17 @@ export const listOptions = {
                   type: 'object',
                   nullable: true,
                   properties: {
-                    bagSizes: { type: 'array', items: { type: 'string' } },
-                    commodities: { type: 'array', items: { type: 'string' } },
+                    varieties: { type: 'array', items: { type: 'string' } },
+                    commodities: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          name: { type: 'string' },
+                          sizes: { type: 'array', items: { type: 'string' } },
+                        },
+                      },
+                    },
                     generation: { type: 'string', nullable: true },
                     rouging: { type: 'string', nullable: true },
                     tuberType: { type: 'string', nullable: true },

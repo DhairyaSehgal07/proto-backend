@@ -1,18 +1,15 @@
 import type { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } from 'fastify';
-import { ZodError } from 'zod';
 import { StoreAdminController } from '../controllers/store-admin.controller.js';
 import {
   createStoreAdminSchema,
   updateStoreAdminSchema,
   loginStoreAdminSchema,
   registerFarmerSchema,
-  refreshTokenSchema,
   CreateStoreAdminInput,
   UpdateStoreAdminInput,
   StoreAdminIdParam,
   StoreAdminQuery,
   LoginStoreAdminInput,
-  RefreshTokenInput,
   RegisterFarmerInput,
   DaybookQuery,
 } from '../schemas/store-admin.schema.js';
@@ -137,73 +134,6 @@ function storeAdminRoutes(fastify: FastifyInstance, _options: FastifyPluginOptio
       rateLimitStore.set(rateLimitKey, userAttempts);
 
       await controller.login(request as FastifyRequest<LoginStoreAdminRequestParams>, reply);
-    }
-  );
-
-  /**
-   * POST /api/v1/store-admin/refresh
-   * Refresh access token
-   */
-  fastify.post(
-    '/refresh',
-    {
-      schema: {
-        description: 'Refresh access token using refresh token',
-        tags: ['store-admin'],
-        body: {
-          type: 'object',
-          required: ['refreshToken'],
-          properties: {
-            refreshToken: {
-              type: 'string',
-              minLength: 1,
-            },
-          },
-        },
-        response: {
-          200: {
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  accessToken: { type: 'string' },
-                  refreshToken: { type: 'string' },
-                },
-              },
-            },
-          },
-        },
-      },
-      preHandler: [
-        async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
-          try {
-            const validated = refreshTokenSchema.parse(request.body);
-            request.body = validated;
-          } catch (error) {
-            if (error instanceof ZodError) {
-              reply.code(400).send({
-                success: false,
-                error: {
-                  code: 'VALIDATION_ERROR',
-                  message: 'Request validation failed',
-                  details: error.issues.map((e) => ({
-                    path: e.path.map(String).join('.'),
-                    message: e.message,
-                  })),
-                },
-              });
-              return;
-            }
-            throw error;
-          }
-        },
-      ],
-    },
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      await controller.refreshToken(request as FastifyRequest<{ Body: RefreshTokenInput }>, reply);
     }
   );
 

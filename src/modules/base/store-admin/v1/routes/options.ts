@@ -77,13 +77,19 @@ export const loginOptions = {
                     type: 'object',
                     nullable: true,
                     properties: {
-                      bagSizes: {
+                      varieties: {
                         type: 'array',
                         items: { type: 'string' },
                       },
                       commodities: {
                         type: 'array',
-                        items: { type: 'string' },
+                        items: {
+                          type: 'object',
+                          properties: {
+                            name: { type: 'string' },
+                            sizes: { type: 'array', items: { type: 'string' } },
+                          },
+                        },
                       },
                       generation: { type: 'string', nullable: true },
                       rouging: { type: 'string', nullable: true },
@@ -108,7 +114,6 @@ export const loginOptions = {
                   'updatedAt',
                 ],
               },
-              token: { type: 'string' }, // Only present when isMobile is true
             },
             required: ['admin', 'coldStorage'],
           },

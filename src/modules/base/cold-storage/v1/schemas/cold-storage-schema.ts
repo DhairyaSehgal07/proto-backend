@@ -10,8 +10,17 @@ export const PlanEnum = z.enum(['Basic', 'Pro', 'Enterprise']);
  */
 export const preferencesSchema = z
   .object({
-    bagSizes: z.array(z.string()).default([]),
-    commodities: z.array(z.string()).default([]),
+    commodities: z
+      .array(
+        z.object({
+          name: z.string(),
+          sizes: z.array(z.string()).default([]),
+        })
+      )
+      .default([]),
+
+    varieties: z.array(z.string()).default([]),
+
     generation: z.string().nullable().optional(),
     rouging: z.string().nullable().optional(),
     tuberType: z.string().nullable().optional(),

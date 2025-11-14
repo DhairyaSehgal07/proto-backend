@@ -107,20 +107,30 @@ model ColdStorage {
 
 // 🧩 Preferences
 model Preferences {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  bagSizes    String[] @default([])
-  commodities String[] @default([])
-  generation  String?
-  rouging     String?
-  tuberType   String?
-  grader      String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String         @id @default(auto()) @map("_id") @db.ObjectId
 
-  coldStorage ColdStorage?
+  varieties    String[]       @default(["Atlantic", "Cardinal", "Chipsona 1", "Chipsona 2", "Chipsona 3", "Colomba", "Desiree", "Diamond", "FC - 11", "FC - 12", "FC - 5", "Fry Sona", "Himalini", "K. Badshah", "K. Chandramukhi", "K. Jyoti", "K. Pukhraj", "Kuroda", "Khyati", "L.R", "Lima", "Mohan", "Pushkar", "SU - Khyati", "Super Six", "Surya"])
+
+  commodities  CommodityObj[] // <-- embedded object array
+
+  generation   String?
+  rouging      String?
+  tuberType    String?
+  grader       String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  coldStorage  ColdStorage?
 
   @@index([createdAt])
 }
+
+type CommodityObj {
+  name  String
+  sizes String[]
+}
+
+
 
 // 👤 Store Admin (super-admin, store-admin, sub-admin)
 model StoreAdmin {

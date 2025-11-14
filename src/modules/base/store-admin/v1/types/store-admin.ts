@@ -63,11 +63,19 @@ export interface LoginStoreAdminRequest {
 }
 
 /**
+ * Commodity object type matching Prisma schema
+ */
+export interface CommodityObj {
+  name: string;
+  sizes: string[];
+}
+
+/**
  * Preferences type for API responses (excludes internal fields)
  */
 export interface Preferences {
-  bagSizes: string[];
-  commodities: string[];
+  varieties: string[];
+  commodities: CommodityObj[];
   generation: string | null;
   rouging: string | null;
   tuberType: string | null;
@@ -98,23 +106,7 @@ export interface ColdStorageResponse {
 export interface LoginStoreAdminResponse {
   admin: StoreAdminResponse;
   coldStorage: ColdStorageResponse;
-  accessToken: string;
-  refreshToken: string;
-}
-
-/**
- * Refresh token request type
- */
-export interface RefreshTokenRequest {
-  refreshToken: string;
-}
-
-/**
- * Refresh token response type
- */
-export interface RefreshTokenResponse {
-  accessToken: string;
-  refreshToken: string;
+  token: string;
 }
 
 /**

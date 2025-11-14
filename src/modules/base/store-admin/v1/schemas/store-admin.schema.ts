@@ -63,13 +63,6 @@ export const loginStoreAdminSchema = z.object({
 });
 
 /**
- * REFRESH TOKEN schema
- */
-export const refreshTokenSchema = z.object({
-  refreshToken: z.string().min(1, 'Refresh token is required'),
-});
-
-/**
  * REGISTER FARMER schema
  */
 export const registerFarmerSchema = z.object({
@@ -107,6 +100,5 @@ export type UpdateStoreAdminInput = z.infer<typeof updateStoreAdminSchema>;
 export type StoreAdminIdParam = z.infer<typeof storeAdminIdParamSchema>;
 export type StoreAdminQuery = z.infer<typeof storeAdminQuerySchema>;
 export type LoginStoreAdminInput = z.infer<typeof loginStoreAdminSchema>;
-export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>;
 export type RegisterFarmerInput = z.infer<typeof registerFarmerSchema>;
 export type DaybookQuery = z.infer<typeof daybookQuerySchema>;

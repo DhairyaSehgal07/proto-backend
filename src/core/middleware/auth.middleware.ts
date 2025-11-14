@@ -35,13 +35,13 @@ export async function authenticateAdmin(
   try {
     let token: string | undefined;
 
-    // Check for token in Authorization header (Bearer token)
+    // Check for token in Authorization header (Bearer token) or cookie
     const authHeader = request.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
       token = authHeader.substring(7); // Remove 'Bearer ' prefix
     } else {
-      // Check for token in cookie (cookie name is 'accessToken' for new implementation, 'jwt' for backward compatibility)
-      token = request.cookies.accessToken || request.cookies.jwt;
+      // Check for token in cookie (cookie name is 'jwt')
+      token = request.cookies.jwt;
     }
 
     if (!token) {

@@ -241,7 +241,7 @@ export class ColdStorageService {
     // Always include preferences field, even if null
     const preferences: Preferences | null = coldStorage.preferences
       ? {
-          bagSizes: coldStorage.preferences.bagSizes ?? [],
+          varieties: coldStorage.preferences.varieties ?? [],
           commodities: coldStorage.preferences.commodities ?? [],
           generation: coldStorage.preferences.generation ?? null,
           rouging: coldStorage.preferences.rouging ?? null,

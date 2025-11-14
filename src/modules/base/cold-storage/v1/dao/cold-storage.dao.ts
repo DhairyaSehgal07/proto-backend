@@ -95,7 +95,7 @@ export class ColdStorageDAO {
           preferences: data.preferences
             ? {
                 create: {
-                  bagSizes: data.preferences.bagSizes ?? [],
+                  varieties: data.preferences.varieties ?? [],
                   commodities: data.preferences.commodities ?? [],
                   generation: data.preferences.generation ?? null,
                   rouging: data.preferences.rouging ?? null,
@@ -141,7 +141,7 @@ export class ColdStorageDAO {
           updateData.preferences = {
             upsert: {
               create: {
-                bagSizes: data.preferences.bagSizes ?? [],
+                varieties: data.preferences.varieties ?? [],
                 commodities: data.preferences.commodities ?? [],
                 generation: data.preferences.generation ?? null,
                 rouging: data.preferences.rouging ?? null,
@@ -149,7 +149,7 @@ export class ColdStorageDAO {
                 grader: data.preferences.grader ?? null,
               },
               update: {
-                bagSizes: data.preferences.bagSizes ?? [],
+                varieties: data.preferences.varieties ?? [],
                 commodities: data.preferences.commodities ?? [],
                 generation: data.preferences.generation ?? null,
                 rouging: data.preferences.rouging ?? null,
