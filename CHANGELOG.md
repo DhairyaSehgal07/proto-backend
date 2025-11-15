@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.4.1](https://github.com/DhairyaSehgal07/ColdOp-backend/compare/v0.4.0...v0.4.1) (2025-11-15)
+
+### ### Changed
+
+- update cold storage and store admin modules with schema changes ([a15cb78](https://github.com/DhairyaSehgal07/ColdOp-backend/commit/a15cb78a61ffb5467cafec4eb526e2165b028295))
+
+### ### Added
+
+- add preferences module with CRUD operations ([01da9dd](https://github.com/DhairyaSehgal07/ColdOp-backend/commit/01da9dde827fc964cd671a00cec199cfd799c7c4))
+- update store admin, orders modules and add security utils ([e6c9e3d](https://github.com/DhairyaSehgal07/ColdOp-backend/commit/e6c9e3dfa6ccf62f44e6389e0bc26e5ae75a5b59))
+
 ## [0.4.0](https://github.com/DhairyaSehgal07/ColdOp-backend/compare/v0.3.2...v0.4.0) (2025-11-10)
 
 ### [0.3.2](https://github.com/DhairyaSehgal07/ColdOp-backend/compare/v0.3.1...v0.3.2) (2025-11-09)
