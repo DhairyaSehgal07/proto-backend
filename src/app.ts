@@ -4,6 +4,7 @@ import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import cookie from '@fastify/cookie';
 import helmet from '@fastify/helmet';
+import rateLimit from '@fastify/rate-limit';
 import prismaPlugin from './plugins/prisma.js';
 import { config } from 'dotenv';
 import coldStorageRoutes from '@/modules/base/cold-storage/v1/routes/cold-storage.routes.js';
@@ -11,6 +12,7 @@ import storeAdminRoutes from './modules/base/store-admin/v1/routes/store-admin.r
 import rbacRoutes from './modules/base/rbac/v1/routes/rbac.routes.js';
 import incomingOrderRoutes from './modules/base/incoming-orders/v1/routes/incoming-orders.routes.js';
 import outgoingOrderRoutes from './modules/base/outgoing-orders/v1/index.js';
+import preferencesRoutes from './modules/base/preferences/v1/index.js';
 config();
 
 export const buildApp = async (): Promise<FastifyInstance> => {
@@ -62,12 +64,18 @@ export const buildApp = async (): Promise<FastifyInstance> => {
     secret: process.env.AUTH_SECRET || 'your-secret-key-change-in-production',
   });
 
+  // Register rate limiter plugin (global: false to apply only where configured)
+  await fastify.register(rateLimit, {
+    global: false, // Don't apply to all routes by default
+  });
+
   // Register routes
   await fastify.register(coldStorageRoutes, { prefix: '/api/v1/base/cold-storage' });
   await fastify.register(storeAdminRoutes, { prefix: '/api/v1/base/store-admin' });
   await fastify.register(rbacRoutes, { prefix: '/api/v1/base/rbac' });
   await fastify.register(incomingOrderRoutes, { prefix: '/api/v1/base/incoming-orders' });
   await fastify.register(outgoingOrderRoutes, { prefix: '/api/v1/base/outgoing-orders' });
+  await fastify.register(preferencesRoutes, { prefix: '/api/v1/base/preferences' });
 
   // Health check endpoint
   fastify.get('/health', () => ({

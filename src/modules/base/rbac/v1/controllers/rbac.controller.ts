@@ -172,7 +172,6 @@ export class RBACController {
         coldStorageId,
         request.admin?.coldStorageId
       );
-      console.log('admins are: ', admins);
 
       reply.code(200).send({
         success: true,

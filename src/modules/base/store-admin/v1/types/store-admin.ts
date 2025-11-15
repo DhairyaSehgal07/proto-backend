@@ -71,15 +71,24 @@ export interface CommodityObj {
 }
 
 /**
- * Preferences type for API responses (excludes internal fields)
+ * Incoming preferences type
+ */
+export interface IncomingPrefs {
+  showCustomMarka: boolean;
+}
+
+/**
+ * Preferences type for API responses (includes id)
  */
 export interface Preferences {
+  id: string;
   varieties: string[];
   commodities: CommodityObj[];
   generation: string | null;
   rouging: string | null;
   tuberType: string | null;
   grader: string | null;
+  incoming: IncomingPrefs;
 }
 
 /**
@@ -212,4 +221,24 @@ export interface DaybookResponse {
     nextPage: number | null;
     previousPage: number | null;
   };
+}
+
+/**
+ * Farmer response type for /farmer route
+ */
+export interface FarmerResponse {
+  id: string; // farmerStorageLink id
+  farmerId: string; // farmer document id
+  name: string;
+  mobileNumber: string;
+  address: string;
+  accountNumber: number;
+  isActive: boolean;
+}
+
+/**
+ * Farmers list response type
+ */
+export interface FarmersListResponse {
+  data: FarmerResponse[];
 }

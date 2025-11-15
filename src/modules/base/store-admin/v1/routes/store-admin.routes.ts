@@ -25,6 +25,7 @@ import {
   deleteOptions,
   registerFarmerOptions,
   daybookOptions,
+  getFarmersOptions,
 } from './options.js';
 import {
   createBodyValidator,
@@ -85,54 +86,15 @@ function storeAdminRoutes(fastify: FastifyInstance, _options: FastifyPluginOptio
     '/login',
     {
       ...loginOptions,
+      config: {
+        rateLimit: {
+          max: 5,
+          timeWindow: '15 minutes',
+        },
+      },
       preHandler: [createLoginBodyValidator(loginStoreAdminSchema)],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      // Rate limiting: 5 attempts per 15 minutes per IP
-      const rateLimitKey =
-        request.ip ||
-        request.socket.remoteAddress ||
-        request.headers['x-forwarded-for']?.toString().split(',')[0] ||
-        'unknown';
-
-      // Simple in-memory rate limiting (for production, use Redis or similar)
-      type RateLimitStore = Map<string, { count: number; resetTime: number }>;
-      const rateLimitStore: RateLimitStore =
-        (fastify as FastifyInstance & { rateLimitStore?: RateLimitStore }).rateLimitStore ||
-        new Map();
-      (fastify as FastifyInstance & { rateLimitStore: RateLimitStore }).rateLimitStore =
-        rateLimitStore;
-
-      const now = Date.now();
-      const windowMs = 15 * 60 * 1000; // 15 minutes
-      const maxAttempts = 15;
-
-      const userAttempts = rateLimitStore.get(rateLimitKey) || {
-        count: 0,
-        resetTime: now + windowMs,
-      };
-
-      if (now > userAttempts.resetTime) {
-        userAttempts.count = 0;
-        userAttempts.resetTime = now + windowMs;
-      }
-
-      if (userAttempts.count >= maxAttempts) {
-        const retryAfter = Math.ceil((userAttempts.resetTime - now) / 1000);
-        reply.code(429).send({
-          success: false,
-          error: {
-            code: 'RATE_LIMIT_EXCEEDED',
-            message: `Too many login attempts. Please try again in ${Math.ceil(retryAfter / 60)} minutes.`,
-            retryAfter,
-          },
-        });
-        return;
-      }
-
-      userAttempts.count++;
-      rateLimitStore.set(rateLimitKey, userAttempts);
-
       await controller.login(request as FastifyRequest<LoginStoreAdminRequestParams>, reply);
     }
   );
@@ -234,7 +196,7 @@ function storeAdminRoutes(fastify: FastifyInstance, _options: FastifyPluginOptio
    * Register a farmer and link to cold storage
    */
   fastify.post(
-    '/register-farmer',
+    '/farmer/register',
     {
       ...registerFarmerOptions,
       preHandler: [
@@ -263,6 +225,21 @@ function storeAdminRoutes(fastify: FastifyInstance, _options: FastifyPluginOptio
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       await controller.getDaybook(request as FastifyRequest<DaybookRequestParams>, reply);
+    }
+  );
+
+  /**
+   * GET /api/v1/store-admin/farmer
+   * Get all farmers for the logged-in store admin's cold storage
+   */
+  fastify.get(
+    '/farmers',
+    {
+      ...getFarmersOptions,
+      preHandler: [authenticateAdmin],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      await controller.getFarmers(request, reply);
     }
   );
 }

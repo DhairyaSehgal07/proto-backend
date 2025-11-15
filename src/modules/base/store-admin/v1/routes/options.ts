@@ -77,6 +77,7 @@ export const loginOptions = {
                     type: 'object',
                     nullable: true,
                     properties: {
+                      id: { type: 'string' },
                       varieties: {
                         type: 'array',
                         items: { type: 'string' },
@@ -89,6 +90,13 @@ export const loginOptions = {
                             name: { type: 'string' },
                             sizes: { type: 'array', items: { type: 'string' } },
                           },
+                        },
+                      },
+                      incoming: {
+                        type: 'object',
+                        nullable: true,
+                        properties: {
+                          showCustomMarka: { type: 'boolean', default: false },
                         },
                       },
                       generation: { type: 'string', nullable: true },
@@ -568,6 +576,75 @@ export const daybookOptions = {
               hasPreviousPage: { type: 'boolean' },
               nextPage: { type: 'number', nullable: true },
               previousPage: { type: 'number', nullable: true },
+            },
+          },
+        },
+      },
+      400: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          error: {
+            type: 'object',
+            properties: {
+              code: { type: 'string' },
+              message: { type: 'string' },
+            },
+          },
+        },
+      },
+      401: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          error: {
+            type: 'object',
+            properties: {
+              code: { type: 'string' },
+              message: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+  },
+} as RouteShorthandOptions;
+
+/**
+ * Route options for GET /api/v1/store-admin/farmer
+ * Get all farmers for the logged-in store admin's cold storage
+ */
+export const getFarmersOptions = {
+  schema: {
+    description: "Get all farmers for the logged-in store admin's cold storage",
+    tags: ['store-admin'],
+    response: {
+      200: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          data: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                id: { type: 'string' },
+                farmerId: { type: 'string' },
+                name: { type: 'string' },
+                mobileNumber: { type: 'string' },
+                address: { type: 'string' },
+                accountNumber: { type: 'number' },
+                isActive: { type: 'boolean' },
+              },
+              required: [
+                'id',
+                'farmerId',
+                'name',
+                'mobileNumber',
+                'address',
+                'accountNumber',
+                'isActive',
+              ],
             },
           },
         },

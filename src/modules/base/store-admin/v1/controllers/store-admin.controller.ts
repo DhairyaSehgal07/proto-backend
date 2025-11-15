@@ -294,6 +294,8 @@ export class StoreAdminController {
     }
   }
 
+  /* STORE ADMIN FUNCTIONALITY */
+
   /**
    * GET /store-admin/daybook - Get daybook orders (incoming and outgoing)
    */
@@ -339,6 +341,44 @@ export class StoreAdminController {
         success: true,
         data: result.data,
         pagination: result.pagination,
+      });
+    } catch (error) {
+      this.handleError(error, reply);
+    }
+  }
+
+  /**
+   * GET /store-admin/farmer - Get all farmers for the logged-in store admin's cold storage
+   */
+  async getFarmers(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      if (!request.admin) {
+        reply.code(401).send({
+          success: false,
+          error: {
+            code: 'AUTHENTICATION_REQUIRED',
+            message: 'Authentication required',
+          },
+        });
+        return;
+      }
+
+      if (!request.admin.coldStorageId) {
+        reply.code(400).send({
+          success: false,
+          error: {
+            code: 'MISSING_COLD_STORAGE',
+            message: 'Missing cold storage context',
+          },
+        });
+        return;
+      }
+
+      const result = await this.service.getFarmers(request.admin.coldStorageId);
+
+      reply.code(200).send({
+        success: true,
+        data: result.data,
       });
     } catch (error) {
       this.handleError(error, reply);

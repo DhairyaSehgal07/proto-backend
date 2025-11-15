@@ -14,6 +14,8 @@ import type {
   Preferences,
   DaybookResponse,
   DaybookOrderItem,
+  FarmersListResponse,
+  FarmerResponse,
 } from '../types/store-admin.js';
 import {
   Prisma,
@@ -492,30 +494,32 @@ export class StoreAdminService {
 
   /**
    * Log login attempt for audit trail
+   * TEMPORARILY DISABLED - Commented out to skip adding documents to loginAudit
    */
   private async logLoginAttempt(
-    mobileNumber: string,
-    adminId: string | null,
-    success: boolean,
-    ipAddress: string,
-    deviceInfo: string,
-    failureReason?: string
+    _mobileNumber: string,
+    _adminId: string | null,
+    _success: boolean,
+    _ipAddress: string,
+    _deviceInfo: string,
+    _failureReason?: string
   ): Promise<void> {
-    try {
-      await this.fastify.prisma.loginAudit.create({
-        data: {
-          adminId,
-          mobileNumber,
-          success,
-          ipAddress,
-          deviceInfo,
-          failureReason: success ? null : failureReason || null,
-        },
-      });
-    } catch (error) {
-      // Log error but don't fail the login process
-      this.fastify.log.error(error, 'Failed to log login attempt');
-    }
+    // TEMPORARILY DISABLED - Commented out to skip adding documents to loginAudit
+    // try {
+    //   await this.fastify.prisma.loginAudit.create({
+    //     data: {
+    //       adminId: _adminId,
+    //       mobileNumber: _mobileNumber,
+    //       success: _success,
+    //       ipAddress: _ipAddress,
+    //       deviceInfo: _deviceInfo,
+    //       failureReason: _success ? null : _failureReason || null,
+    //     },
+    //   });
+    // } catch (error) {
+    //   // Log error but don't fail the login process
+    //   this.fastify.log.error(error, 'Failed to log login attempt');
+    // }
   }
 
   /**
@@ -676,15 +680,19 @@ export class StoreAdminService {
       include: { preferences: true };
     }>
   ): ColdStorageResponse {
-    // Map preferences, excluding internal fields (id, createdAt, updatedAt)
+    // Map preferences, including id (MongoDB ObjectId)
     const preferences: Preferences | null = coldStorage.preferences
       ? {
+          id: coldStorage.preferences.id,
           varieties: coldStorage.preferences.varieties ?? [],
           commodities: coldStorage.preferences.commodities ?? [],
           generation: coldStorage.preferences.generation ?? null,
           rouging: coldStorage.preferences.rouging ?? null,
           tuberType: coldStorage.preferences.tuberType ?? null,
           grader: coldStorage.preferences.grader ?? null,
+          incoming: coldStorage.preferences.incoming ?? {
+            showCustomMarka: false,
+          },
         }
       : null;
 
@@ -1394,5 +1402,44 @@ export class StoreAdminService {
           "Invalid type parameter. Use 'all', 'incoming', or 'outgoing'."
         );
     }
+  }
+
+  /**
+   * Get all farmers for a cold storage
+   * Returns farmer storage links with farmer information populated
+   */
+  async getFarmers(coldStorageId: string): Promise<FarmersListResponse> {
+    // Query all farmer storage links for this cold storage with farmer populated
+    const links = await this.fastify.prisma.farmerStorageLink.findMany({
+      where: {
+        coldStorageId,
+      },
+      include: {
+        farmer: {
+          select: {
+            id: true,
+            name: true,
+            mobileNumber: true,
+            address: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    // Map to response format
+    const data: FarmerResponse[] = links.map((link) => ({
+      id: link.id,
+      farmerId: link.farmer.id,
+      name: link.farmer.name,
+      mobileNumber: link.farmer.mobileNumber,
+      address: link.farmer.address,
+      accountNumber: link.accountNumber,
+      isActive: link.isActive,
+    }));
+
+    return { data };
   }
 }

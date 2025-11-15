@@ -111,12 +111,15 @@ model Preferences {
 
   varieties    String[]       @default(["Atlantic", "Cardinal", "Chipsona 1", "Chipsona 2", "Chipsona 3", "Colomba", "Desiree", "Diamond", "FC - 11", "FC - 12", "FC - 5", "Fry Sona", "Himalini", "K. Badshah", "K. Chandramukhi", "K. Jyoti", "K. Pukhraj", "Kuroda", "Khyati", "L.R", "Lima", "Mohan", "Pushkar", "SU - Khyati", "Super Six", "Surya"])
 
-  commodities  CommodityObj[] // <-- embedded object array
+  commodities  CommodityObj[]
 
   generation   String?
   rouging      String?
   tuberType    String?
   grader       String?
+
+ incoming     IncomingPrefs
+
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
@@ -130,6 +133,9 @@ type CommodityObj {
   sizes String[]
 }
 
+type IncomingPrefs {
+  showCustomMarka Boolean @default(false)
+}
 
 
 // 👤 Store Admin (super-admin, store-admin, sub-admin)

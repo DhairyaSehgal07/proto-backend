@@ -101,6 +101,9 @@ export class ColdStorageDAO {
                   rouging: data.preferences.rouging ?? null,
                   tuberType: data.preferences.tuberType ?? null,
                   grader: data.preferences.grader ?? null,
+                  incoming: {
+                    showCustomMarka: false,
+                  },
                 },
               }
             : undefined,
@@ -147,6 +150,9 @@ export class ColdStorageDAO {
                 rouging: data.preferences.rouging ?? null,
                 tuberType: data.preferences.tuberType ?? null,
                 grader: data.preferences.grader ?? null,
+                incoming: {
+                  showCustomMarka: false,
+                },
               },
               update: {
                 varieties: data.preferences.varieties ?? [],
