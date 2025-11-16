@@ -81,11 +81,12 @@ export class StoreAdminController {
         request
       );
 
+      const isProduction = process.env.NODE_ENV === 'production';
       // Store token in HTTP-only cookie named "jwt"
       reply.setCookie('jwt', result.token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'lax',
         path: '/',
         maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
       });
