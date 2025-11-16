@@ -68,7 +68,7 @@ export class StoreAdminController {
 
   /**
    * POST /store-admin/login - Login store admin
-   * Security: Uses single JWT token stored in HTTP-only cookie
+   * Returns JWT token in JSON response (cookie handling done by Next.js API route)
    */
   async login(
     request: FastifyRequest<LoginStoreAdminRequestParams>,
@@ -81,21 +81,12 @@ export class StoreAdminController {
         request
       );
 
-      const isProduction = process.env.NODE_ENV === 'production';
-      // Store token in HTTP-only cookie named "jwt"
-      reply.setCookie('jwt', result.token, {
-        httpOnly: true,
-        secure: isProduction,
-        sameSite: isProduction ? 'none' : 'lax',
-        path: '/',
-        maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
-      });
-
-      // Send response without token
+      // Return token in JSON response (Next.js API route will handle cookie setting)
       reply.code(200).send({
         success: true,
         message: 'Login successful',
         data: {
+          token: result.token,
           admin: result.admin,
           coldStorage: result.coldStorage,
         },
@@ -107,19 +98,11 @@ export class StoreAdminController {
 
   /**
    * POST /store-admin/logout - Logout store admin
-   * Clears JWT cookie
+   * Cookie clearing handled by Next.js API route
    */
   async logout(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     try {
       await this.service.logout();
-
-      // Clear JWT cookie
-      reply.clearCookie('jwt', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        path: '/',
-      });
 
       reply.code(200).send({
         success: true,

@@ -2,11 +2,11 @@ import type { RouteShorthandOptions } from 'fastify';
 
 /**
  * Route options for POST /api/v1/store-admin/logout
- * Logout store admin
+ * Logout store admin (cookie clearing handled by Next.js API route)
  */
 export const logoutOptions = {
   schema: {
-    description: 'Logout store admin',
+    description: 'Logout store admin. Cookie clearing is handled by Next.js API route.',
     tags: ['store-admin'],
     response: {
       200: {
@@ -14,6 +14,19 @@ export const logoutOptions = {
         properties: {
           success: { type: 'boolean' },
           message: { type: 'string' },
+        },
+      },
+      401: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          error: {
+            type: 'object',
+            properties: {
+              code: { type: 'string' },
+              message: { type: 'string' },
+            },
+          },
         },
       },
     },
@@ -37,6 +50,7 @@ export const loginOptions = {
           data: {
             type: 'object',
             properties: {
+              token: { type: 'string', description: 'JWT token for authentication' },
               admin: {
                 type: 'object',
                 properties: {
@@ -123,7 +137,7 @@ export const loginOptions = {
                 ],
               },
             },
-            required: ['admin', 'coldStorage'],
+            required: ['token', 'admin', 'coldStorage'],
           },
         },
       },
