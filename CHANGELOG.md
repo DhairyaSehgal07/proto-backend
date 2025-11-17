@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.4.2](https://github.com/DhairyaSehgal07/proto-backend/compare/v0.4.1...v0.4.2) (2025-11-17)
+
+### ### Changed
+
+- **auth:** remove cookie handling from Fastify login/logout ([fdb03fe](https://github.com/DhairyaSehgal07/proto-backend/commit/fdb03fe08296a4441b49546f34819504a88209ef))
+- configure package.json for deployment ([82ae890](https://github.com/DhairyaSehgal07/proto-backend/commit/82ae8907d9869c1e4e5812b1eb794a1f66b2cea9))
+- update cookie config in store-admin login ([8893ffb](https://github.com/DhairyaSehgal07/proto-backend/commit/8893ffb2394184514ada78f0aae2a6a48346982a))
+- update pnpm-lock.yaml ([80c12c4](https://github.com/DhairyaSehgal07/proto-backend/commit/80c12c4621a750fce66fbfb73b7c9071b3a693a4))
+
+### ### Added
+
+- add daybook functionality and enhance incoming orders module ([469bfd1](https://github.com/DhairyaSehgal07/proto-backend/commit/469bfd17ec7a5dd371a8d92c21eec85a48fb6fde))
+
 ### [0.4.1](https://github.com/DhairyaSehgal07/ColdOp-backend/compare/v0.4.0...v0.4.1) (2025-11-15)
 
 ### ### Changed
