@@ -8,6 +8,7 @@ export interface BagSizeInput {
   quantityInit: number;
   quantityCurr: number;
   approxWeight?: number;
+  customMarka?: string;
   floor: string;
   row: string;
   chamber: string;
@@ -21,6 +22,7 @@ export interface ProcessedBagSize {
   quantityInit: number;
   quantityCurr: number;
   approxWeight?: number;
+  customMarka?: string;
   locationId: string;
 }
 

@@ -93,6 +93,18 @@ export const daybookQuerySchema = z.object({
 });
 
 /**
+ * GATE PASS NUMBER QUERY schema — for getting next gate pass number
+ */
+export const gatePassNumberQuerySchema = z.object({
+  commodity: z
+    .enum(['POTATO', 'ONION', 'GARLIC', 'TOMATO', 'CARROT', 'APPLE', 'SWEETS', 'OTHER'])
+    .describe('Commodity type to get the next gate pass number for'),
+  type: z
+    .enum(['incoming', 'outgoing'])
+    .describe('Order type - determines which model to query (incoming or outgoing orders)'),
+});
+
+/**
  * Type Inference (for controller/service layers)
  */
 export type CreateStoreAdminInput = z.infer<typeof createStoreAdminSchema>;
@@ -102,3 +114,4 @@ export type StoreAdminQuery = z.infer<typeof storeAdminQuerySchema>;
 export type LoginStoreAdminInput = z.infer<typeof loginStoreAdminSchema>;
 export type RegisterFarmerInput = z.infer<typeof registerFarmerSchema>;
 export type DaybookQuery = z.infer<typeof daybookQuerySchema>;
+export type GatePassNumberQuery = z.infer<typeof gatePassNumberQuerySchema>;

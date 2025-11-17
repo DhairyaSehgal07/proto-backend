@@ -8,6 +8,7 @@ import {
   loginStoreAdminSchema,
   registerFarmerSchema,
   daybookQuerySchema,
+  gatePassNumberQuerySchema,
 } from '../schemas/store-admin.schema.js';
 
 /**
@@ -168,6 +169,37 @@ export function validateDaybookQuery(
 ): void {
   try {
     const validated = daybookQuerySchema.parse(request.query);
+    request.query = validated;
+    done();
+  } catch (error) {
+    if (error instanceof ZodError) {
+      reply.code(400).send({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid query parameters',
+          details: error.issues.map((e) => ({
+            path: e.path.join('.'),
+            message: e.message,
+          })),
+        },
+      });
+      return;
+    }
+    throw error;
+  }
+}
+
+/**
+ * Gate pass number query validator
+ */
+export function validateGatePassNumberQuery(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  done: (err?: Error) => void
+): void {
+  try {
+    const validated = gatePassNumberQuerySchema.parse(request.query);
     request.query = validated;
     done();
   } catch (error) {

@@ -12,6 +12,7 @@ import {
   LoginStoreAdminInput,
   RegisterFarmerInput,
   DaybookQuery,
+  GatePassNumberQuery,
 } from '../schemas/store-admin.schema.js';
 import { authenticateAdmin } from '@/core/middleware/auth.middleware.js';
 import { requirePermission } from '@/core/middleware/permission.middleware.js';
@@ -26,6 +27,7 @@ import {
   registerFarmerOptions,
   daybookOptions,
   getFarmersOptions,
+  getGatePassNumberOptions,
 } from './options.js';
 import {
   createBodyValidator,
@@ -34,6 +36,7 @@ import {
   validateParams,
   validateQuery,
   validateDaybookQuery,
+  validateGatePassNumberQuery,
 } from './validators.js';
 
 /**
@@ -70,6 +73,10 @@ interface RegisterFarmerRequestParams {
 
 interface DaybookRequestParams {
   Querystring: DaybookQuery;
+}
+
+interface GatePassNumberRequestParams {
+  Querystring: GatePassNumberQuery;
 }
 
 /**
@@ -240,6 +247,24 @@ function storeAdminRoutes(fastify: FastifyInstance, _options: FastifyPluginOptio
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       await controller.getFarmers(request, reply);
+    }
+  );
+
+  /**
+   * GET /api/v1/store-admin/gate-pass-number
+   * Get the next gate pass number for a commodity
+   */
+  fastify.get(
+    '/gate-pass-number',
+    {
+      ...getGatePassNumberOptions,
+      preHandler: [authenticateAdmin, validateGatePassNumberQuery],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      await controller.getNextGatePassNumber(
+        request as FastifyRequest<GatePassNumberRequestParams>,
+        reply
+      );
     }
   );
 }

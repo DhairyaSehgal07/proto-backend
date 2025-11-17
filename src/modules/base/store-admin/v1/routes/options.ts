@@ -555,6 +555,7 @@ export const daybookOptions = {
                             quantityInit: { type: 'number' },
                             quantityCurr: { type: 'number' },
                             approxWeight: { type: 'number', nullable: true },
+                            customMarka: { type: 'string', nullable: true },
                             locationId: { type: 'string' },
                             incomingOrderId: { type: 'string', nullable: true },
                             floor: { type: 'string', nullable: true },
@@ -660,6 +661,91 @@ export const getFarmersOptions = {
                 'isActive',
               ],
             },
+          },
+        },
+      },
+      400: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          error: {
+            type: 'object',
+            properties: {
+              code: { type: 'string' },
+              message: { type: 'string' },
+            },
+          },
+        },
+      },
+      401: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          error: {
+            type: 'object',
+            properties: {
+              code: { type: 'string' },
+              message: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+  },
+} as RouteShorthandOptions;
+
+/**
+ * Route options for GET /api/v1/store-admin/gate-pass-number
+ * Get the next gate pass number for a commodity
+ */
+export const getGatePassNumberOptions = {
+  schema: {
+    description:
+      'Get the next gate pass number for a commodity (queries incoming or outgoing orders based on type)',
+    tags: ['store-admin'],
+    querystring: {
+      type: 'object',
+      properties: {
+        commodity: {
+          type: 'string',
+          enum: ['POTATO', 'ONION', 'GARLIC', 'TOMATO', 'CARROT', 'APPLE', 'SWEETS', 'OTHER'],
+          description: 'Commodity type to get the next gate pass number for',
+        },
+        type: {
+          type: 'string',
+          enum: ['incoming', 'outgoing'],
+          description: 'Order type - determines which model to query (incoming or outgoing orders)',
+        },
+      },
+      required: ['commodity', 'type'],
+    },
+    response: {
+      200: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          data: {
+            type: 'object',
+            properties: {
+              nextGatePassNumber: {
+                type: 'number',
+                description: 'The next gate pass number to assign (max + 1)',
+              },
+              commodity: {
+                type: 'string',
+                description: 'The commodity type',
+              },
+              coldStorageId: {
+                type: 'string',
+                description: 'The cold storage ID',
+              },
+              type: {
+                type: 'string',
+                enum: ['incoming', 'outgoing'],
+                description: 'The order type that was queried',
+              },
+            },
+            required: ['nextGatePassNumber', 'commodity', 'coldStorageId', 'type'],
           },
         },
       },

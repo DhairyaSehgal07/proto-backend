@@ -190,6 +190,7 @@ export interface DaybookOrderItem {
       quantityInit: number;
       quantityCurr: number;
       approxWeight?: number;
+      customMarka?: string;
       locationId: string;
       incomingOrderId?: string;
       floor?: string;
@@ -241,4 +242,14 @@ export interface FarmerResponse {
  */
 export interface FarmersListResponse {
   data: FarmerResponse[];
+}
+
+/**
+ * Gate pass number response type
+ */
+export interface GatePassNumberResponse {
+  nextGatePassNumber: number;
+  commodity: string;
+  coldStorageId: string;
+  type: 'incoming' | 'outgoing';
 }

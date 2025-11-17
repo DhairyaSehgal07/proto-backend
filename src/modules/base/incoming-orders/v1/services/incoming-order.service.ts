@@ -59,32 +59,40 @@ export class IncomingOrderService {
     }
 
     // If varieties are provided, validate their structure
+    // Allow empty array or null for null vouchers (remarks can still be stored)
     if (data.varieties !== undefined && data.varieties !== null) {
-      if (!Array.isArray(data.varieties) || data.varieties.length === 0) {
-        throw new IncomingOrderValidationError('varieties must be a non-empty array if provided');
+      if (!Array.isArray(data.varieties)) {
+        throw new IncomingOrderValidationError('varieties must be an array if provided');
       }
 
-      // Validate each variety has bagSizes
-      for (const variety of data.varieties) {
-        if (!variety.name || !Array.isArray(variety.bagSizes) || variety.bagSizes.length === 0) {
-          throw new IncomingOrderValidationError(
-            'Each variety must have a name and non-empty bagSizes array'
-          );
-        }
-
-        // Validate each bagSize has required fields
-        for (const bagSize of variety.bagSizes) {
-          if (
-            !bagSize.name ||
-            bagSize.quantityInit === undefined ||
-            bagSize.quantityCurr === undefined ||
-            !bagSize.floor ||
-            !bagSize.row ||
-            !bagSize.chamber
-          ) {
+      // Empty array is allowed for null vouchers - skip validation
+      if (data.varieties.length === 0) {
+        // Null voucher - varieties will be empty array, remarks can still be stored
+        // No further validation needed
+      } else {
+        // Non-empty array - validate each variety has bagSizes
+        for (const variety of data.varieties) {
+          if (!variety.name || !Array.isArray(variety.bagSizes) || variety.bagSizes.length === 0) {
             throw new IncomingOrderValidationError(
-              'Each bagSize must have name, quantityInit, quantityCurr, floor, row, and chamber'
+              'Each variety must have a name and non-empty bagSizes array'
             );
+          }
+
+          // Validate each bagSize has required fields
+          for (const bagSize of variety.bagSizes) {
+            if (
+              !bagSize.name ||
+              bagSize.quantityInit === undefined ||
+              bagSize.quantityCurr === undefined ||
+              !bagSize.floor ||
+              !bagSize.row ||
+              !bagSize.chamber
+            ) {
+              throw new IncomingOrderValidationError(
+                'Each bagSize must have name, quantityInit, quantityCurr, floor, row, and chamber'
+              );
+            }
+            // customMarka is optional, no validation needed
           }
         }
       }
@@ -108,7 +116,7 @@ export class IncomingOrderService {
         data.varieties.map(async (variety) => {
           const processedBagSizes = await Promise.all(
             variety.bagSizes.map(async (bagSize) => {
-              const { floor, row, chamber, ...restBagSize } = bagSize;
+              const { floor, row, chamber, customMarka, ...restBagSize } = bagSize;
 
               // Find or create location using the composite unique constraint
               let location = await this.fastify.prisma.location.findFirst({
@@ -158,6 +166,7 @@ export class IncomingOrderService {
               // Return bagSize with locationId instead of floor/row/chamber
               return {
                 ...restBagSize,
+                ...(customMarka !== undefined && { customMarka }),
                 locationId: location.id,
               } as ProcessedBagSize;
             })
@@ -505,6 +514,7 @@ export class IncomingOrderService {
                 'Each bagSize must have name, quantityInit, quantityCurr, floor, row, and chamber'
               );
             }
+            // customMarka is optional, no validation needed
           }
         }
 
@@ -513,7 +523,7 @@ export class IncomingOrderService {
           data.varieties.map(async (variety) => {
             const processedBagSizes = await Promise.all(
               variety.bagSizes.map(async (bagSize) => {
-                const { floor, row, chamber, ...restBagSize } = bagSize;
+                const { floor, row, chamber, customMarka, ...restBagSize } = bagSize;
 
                 let location = await this.fastify.prisma.location.findFirst({
                   where: {
@@ -558,6 +568,7 @@ export class IncomingOrderService {
 
                 return {
                   ...restBagSize,
+                  ...(customMarka !== undefined && { customMarka }),
                   locationId: location.id,
                 } as ProcessedBagSize;
               })

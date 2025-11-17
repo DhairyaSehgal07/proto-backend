@@ -20,6 +20,7 @@ import type {
   LoginStoreAdminInput,
   RegisterFarmerInput,
   DaybookQuery,
+  GatePassNumberQuery,
 } from '../schemas/store-admin.schema.js';
 
 // Route-level types
@@ -54,6 +55,10 @@ interface RegisterFarmerRequestParams {
 
 interface DaybookRequestParams {
   Querystring: DaybookQuery;
+}
+
+interface GatePassNumberRequestParams {
+  Querystring: GatePassNumberQuery;
 }
 
 /**
@@ -363,6 +368,75 @@ export class StoreAdminController {
       reply.code(200).send({
         success: true,
         data: result.data,
+      });
+    } catch (error) {
+      this.handleError(error, reply);
+    }
+  }
+
+  /**
+   * GET /store-admin/gate-pass-number - Get the next gate pass number for a commodity
+   */
+  async getNextGatePassNumber(
+    request: FastifyRequest<GatePassNumberRequestParams>,
+    reply: FastifyReply
+  ): Promise<void> {
+    try {
+      if (!request.admin) {
+        reply.code(401).send({
+          success: false,
+          error: {
+            code: 'AUTHENTICATION_REQUIRED',
+            message: 'Authentication required',
+          },
+        });
+        return;
+      }
+
+      if (!request.admin.coldStorageId) {
+        reply.code(400).send({
+          success: false,
+          error: {
+            code: 'MISSING_COLD_STORAGE',
+            message: 'Missing cold storage context',
+          },
+        });
+        return;
+      }
+
+      const { commodity, type } = request.query;
+
+      if (!commodity) {
+        reply.code(400).send({
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Commodity is required',
+          },
+        });
+        return;
+      }
+
+      if (!type) {
+        reply.code(400).send({
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Type is required (incoming or outgoing)',
+          },
+        });
+        return;
+      }
+
+      const result = await this.service.getNextGatePassNumber(
+        request.admin.coldStorageId,
+        commodity,
+        type
+      );
+
+      reply.code(200).send({
+        success: true,
+        data: result,
       });
     } catch (error) {
       this.handleError(error, reply);

@@ -272,6 +272,7 @@ type BagSize {
   name         String
   quantityInit Float
   quantityCurr Float
+  customMarka String?
   approxWeight Float?
   locationId   String @db.ObjectId
 }

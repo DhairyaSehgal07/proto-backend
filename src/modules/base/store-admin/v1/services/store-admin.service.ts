@@ -16,6 +16,7 @@ import type {
   DaybookOrderItem,
   FarmersListResponse,
   FarmerResponse,
+  GatePassNumberResponse,
 } from '../types/store-admin.js';
 import {
   Prisma,
@@ -30,6 +31,7 @@ import {
   getDeviceInfo,
   ACCOUNT_LOCKOUT_CONFIG,
 } from '@/utils/security.utils.js';
+import { getNextGatePassNumber } from './helpers.js';
 
 /**
  * Custom error classes for business logic
@@ -996,6 +998,7 @@ export class StoreAdminService {
               quantityInit: bag.quantityInit,
               quantityCurr: bag.quantityCurr,
               approxWeight: bag.approxWeight ?? undefined,
+              customMarka: (bag as { customMarka?: string }).customMarka ?? undefined,
               locationId: bag.locationId,
               floor: (bag as { floor?: string }).floor,
               row: (bag as { row?: string }).row,
@@ -1289,6 +1292,7 @@ export class StoreAdminService {
                   quantityInit: bag.quantityInit,
                   quantityCurr: bag.quantityCurr,
                   approxWeight: bag.approxWeight ?? undefined,
+                  customMarka: (bag as { customMarka?: string }).customMarka ?? undefined,
                   locationId: bag.locationId,
                 })),
               })),
@@ -1329,6 +1333,7 @@ export class StoreAdminService {
                     quantityInit: bag.quantityInit,
                     quantityCurr: bag.quantityCurr,
                     approxWeight: bag.approxWeight ?? undefined,
+                    customMarka: (bag as { customMarka?: string }).customMarka ?? undefined,
                     locationId: bag.locationId,
                   })),
                 })),
@@ -1441,5 +1446,29 @@ export class StoreAdminService {
     }));
 
     return { data };
+  }
+
+  /**
+   * Get the next gate pass number for a given cold storage and commodity
+   * Queries either incoming or outgoing orders based on the type parameter
+   */
+  async getNextGatePassNumber(
+    coldStorageId: string,
+    commodity: Commodity,
+    type: 'incoming' | 'outgoing'
+  ): Promise<GatePassNumberResponse> {
+    const nextGatePassNumber = await getNextGatePassNumber(
+      this.fastify,
+      coldStorageId,
+      commodity,
+      type
+    );
+
+    return {
+      nextGatePassNumber,
+      commodity,
+      coldStorageId,
+      type,
+    };
   }
 }
