@@ -17,6 +17,7 @@ import type {
   FarmersListResponse,
   FarmerResponse,
   GatePassNumberResponse,
+  FarmerOrdersResponse,
 } from '../types/store-admin.js';
 import {
   Prisma,
@@ -1470,5 +1471,611 @@ export class StoreAdminService {
       coldStorageId,
       type,
     };
+  }
+
+  /**
+   * Get all orders (incoming and outgoing) for a specific farmer
+   * Similar to daybook but filtered by farmerStorageLinkId
+   * No pagination - returns all orders
+   */
+  async getFarmerOrders(
+    coldStorageId: string,
+    farmerStorageLinkId: string,
+    type: 'all' | 'incoming' | 'outgoing' = 'all'
+  ): Promise<FarmerOrdersResponse> {
+    // Verify farmer storage link belongs to cold storage
+    const link = await this.fastify.prisma.farmerStorageLink.findUnique({
+      where: { id: farmerStorageLinkId },
+    });
+
+    if (!link || link.coldStorageId !== coldStorageId) {
+      throw new StoreAdminValidationError('Invalid farmer storage link');
+    }
+
+    // Helper function to enrich orders with location data (batch fetch)
+    const enrichOrdersWithLocations = async <
+      T extends { varieties?: Array<{ bagSizes?: Array<{ locationId: string }> }> },
+    >(
+      orders: T[]
+    ): Promise<T[]> => {
+      // Collect all location IDs
+      const locationIds = new Set<string>();
+      orders.forEach((order) => {
+        if (order.varieties) {
+          order.varieties.forEach((variety) => {
+            if (variety.bagSizes) {
+              variety.bagSizes.forEach((bag) => {
+                if (bag.locationId) {
+                  locationIds.add(bag.locationId);
+                }
+              });
+            }
+          });
+        }
+      });
+
+      if (locationIds.size === 0) {
+        return orders;
+      }
+
+      // Batch fetch all locations
+      const locations = await this.fastify.prisma.location.findMany({
+        where: { id: { in: Array.from(locationIds) } },
+        select: { id: true, floor: true, row: true, chamber: true },
+      });
+
+      const locationMap = new Map(locations.map((loc) => [loc.id, loc]));
+
+      // Enrich orders with location data
+      return orders.map((order) => {
+        if (!order.varieties) return order;
+        return {
+          ...order,
+          varieties: order.varieties.map((variety) => ({
+            ...variety,
+            bagSizes: variety.bagSizes?.map((bag) => {
+              const loc = locationMap.get(bag.locationId);
+              return {
+                ...bag,
+                ...(loc ? { floor: loc.floor, row: loc.row, chamber: loc.chamber } : {}),
+              };
+            }),
+          })),
+        };
+      });
+    };
+
+    // Helper function to enrich daybook orders with incoming order gatePass numbers
+    const enrichDaybookOrdersWithIncomingGatePass = async (
+      orders: DaybookOrderItem[]
+    ): Promise<DaybookOrderItem[]> => {
+      // Collect all incoming order IDs
+      const incomingOrderIds = new Set<string>();
+      orders.forEach((order) => {
+        if (order.varieties) {
+          order.varieties.forEach((variety) => {
+            if (variety.bagSizes) {
+              variety.bagSizes.forEach((bag) => {
+                if (bag.incomingOrderId) {
+                  // Only add if it looks like an ID (ObjectId format), not already a gatePass number
+                  if (
+                    bag.incomingOrderId.length === 24 &&
+                    /^[0-9a-fA-F]{24}$/.test(bag.incomingOrderId)
+                  ) {
+                    incomingOrderIds.add(bag.incomingOrderId);
+                  }
+                }
+              });
+            }
+          });
+        }
+      });
+
+      if (incomingOrderIds.size === 0) {
+        return orders;
+      }
+
+      // Batch fetch all incoming orders to get their gatePass numbers
+      const incomingOrders = await this.fastify.prisma.incomingOrder.findMany({
+        where: { id: { in: Array.from(incomingOrderIds) } },
+        select: { id: true, gatePassNumber: true },
+      });
+
+      const gatePassMap = new Map(
+        incomingOrders.map((io) => [io.id, io.gatePassNumber.toString()])
+      );
+
+      // Enrich orders with gatePass numbers (replace incomingOrderId with gatePass number)
+      return orders.map((order) => {
+        if (!order.varieties) return order;
+        return {
+          ...order,
+          varieties: order.varieties.map((variety) => ({
+            ...variety,
+            bagSizes: variety.bagSizes?.map((bag) => {
+              // If incomingOrderId is an ObjectId, replace with gatePass number
+              if (
+                bag.incomingOrderId &&
+                bag.incomingOrderId.length === 24 &&
+                /^[0-9a-fA-F]{24}$/.test(bag.incomingOrderId)
+              ) {
+                const gatePassNumber = gatePassMap.get(bag.incomingOrderId);
+                return {
+                  ...bag,
+                  incomingOrderId: gatePassNumber ?? bag.incomingOrderId,
+                };
+              }
+              // Already a gatePass number or undefined, keep as is
+              return bag;
+            }),
+          })),
+        };
+      });
+    };
+
+    // Helper function to sort bag sizes by name (in-place for performance)
+    const sortBagSizes = (orders: DaybookOrderItem[]) => {
+      for (const order of orders) {
+        if (order.varieties) {
+          for (const variety of order.varieties) {
+            if (variety.bagSizes) {
+              variety.bagSizes.sort((a, b) => a.name.localeCompare(b.name));
+            }
+          }
+        }
+      }
+      return orders;
+    };
+
+    // Common select for farmer storage link
+    const farmerStorageLinkSelect = {
+      id: true,
+      accountNumber: true,
+      farmer: {
+        select: {
+          id: true,
+          name: true,
+          address: true,
+          mobileNumber: true,
+          imageUrl: true,
+        },
+      },
+    };
+
+    const where: Prisma.IncomingOrderWhereInput | Prisma.OutgoingOrderWhereInput = {
+      coldStorageId,
+      farmerStorageLinkId,
+    };
+
+    switch (type) {
+      case 'incoming': {
+        const incomingOrders = await this.fastify.prisma.incomingOrder.findMany({
+          where: where as Prisma.IncomingOrderWhereInput,
+          orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+          select: {
+            id: true,
+            farmerStorageLinkId: true,
+            coldStorageId: true,
+            commodity: true,
+            gatePassType: true,
+            gatePassNumber: true,
+            remarks: true,
+            currentStockAtThatTime: true,
+            varieties: true,
+            date: true,
+            createdAt: true,
+            updatedAt: true,
+            farmerStorageLink: {
+              select: farmerStorageLinkSelect,
+            },
+            createdBy: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        });
+
+        // Sort by date ?? createdAt
+        const sortedOrders = incomingOrders.sort((a, b) => {
+          const dateA = (a.date ?? a.createdAt).getTime();
+          const dateB = (b.date ?? b.createdAt).getTime();
+          return dateB - dateA;
+        });
+
+        // Enrich with locations
+        const enrichedOrders = await enrichOrdersWithLocations(sortedOrders);
+
+        const daybookOrders: DaybookOrderItem[] = enrichedOrders.map((order) => ({
+          id: order.id,
+          type: 'incoming' as const,
+          farmerStorageLinkId: order.farmerStorageLinkId,
+          coldStorageId: order.coldStorageId,
+          commodity: order.commodity,
+          gatePassType: order.gatePassType,
+          gatePassNumber: order.gatePassNumber,
+          remarks: order.remarks,
+          currentStockAtThatTime: order.currentStockAtThatTime,
+          createdAt: order.createdAt,
+          updatedAt: order.updatedAt,
+          farmerStorageLink: order.farmerStorageLink
+            ? {
+                id: order.farmerStorageLink.id,
+                accountNumber: order.farmerStorageLink.accountNumber,
+                farmer: order.farmerStorageLink.farmer,
+              }
+            : undefined,
+          createdBy: order.createdBy || undefined,
+          varieties: order.varieties?.map((variety) => ({
+            name: variety.name,
+            bagSizes: variety.bagSizes?.map((bag) => ({
+              name: bag.name,
+              quantityInit: bag.quantityInit,
+              quantityCurr: bag.quantityCurr,
+              approxWeight: bag.approxWeight ?? undefined,
+              customMarka: (bag as { customMarka?: string }).customMarka ?? undefined,
+              locationId: bag.locationId,
+              floor: (bag as { floor?: string }).floor,
+              row: (bag as { row?: string }).row,
+              chamber: (bag as { chamber?: string }).chamber,
+            })),
+          })),
+        }));
+
+        sortBagSizes(daybookOrders);
+
+        return {
+          data: daybookOrders,
+        };
+      }
+
+      case 'outgoing': {
+        const outgoingOrders = await this.fastify.prisma.outgoingOrder.findMany({
+          where: where as Prisma.OutgoingOrderWhereInput,
+          orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+          select: {
+            id: true,
+            farmerStorageLinkId: true,
+            coldStorageId: true,
+            commodity: true,
+            gatePassType: true,
+            gatePassNumber: true,
+            remarks: true,
+            currentStockAtThatTime: true,
+            varieties: true,
+            totalBags: true,
+            totalWeight: true,
+            date: true,
+            createdAt: true,
+            updatedAt: true,
+            farmerStorageLink: {
+              select: {
+                id: true,
+                farmer: {
+                  select: {
+                    id: true,
+                    name: true,
+                    address: true,
+                    mobileNumber: true,
+                    imageUrl: true,
+                  },
+                },
+              },
+            },
+            createdBy: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        });
+
+        // Sort by date ?? createdAt
+        const sortedOrders = outgoingOrders.sort((a, b) => {
+          const dateA = (a.date ?? a.createdAt).getTime();
+          const dateB = (b.date ?? b.createdAt).getTime();
+          return dateB - dateA;
+        });
+
+        // Enrich with locations
+        const enrichedOrders = await enrichOrdersWithLocations(sortedOrders);
+
+        const daybookOrders: DaybookOrderItem[] = enrichedOrders.map((order) => ({
+          id: order.id,
+          type: 'outgoing' as const,
+          farmerStorageLinkId: order.farmerStorageLinkId,
+          coldStorageId: order.coldStorageId,
+          commodity: order.commodity,
+          gatePassType: order.gatePassType,
+          gatePassNumber: order.gatePassNumber,
+          remarks: order.remarks,
+          currentStockAtThatTime: order.currentStockAtThatTime,
+          createdAt: order.createdAt,
+          updatedAt: order.updatedAt,
+          farmerStorageLink: order.farmerStorageLink
+            ? {
+                id: order.farmerStorageLink.id,
+                farmer: order.farmerStorageLink.farmer,
+              }
+            : undefined,
+          totalBags: order.totalBags,
+          totalWeight: order.totalWeight,
+          createdBy: order.createdBy || undefined,
+          varieties: order.varieties?.map((variety) => ({
+            name: variety.name,
+            bagSizes: variety.bagSizes?.map((bag) => ({
+              name: bag.name,
+              quantityInit: bag.quantityBefore,
+              quantityCurr: bag.quantityAfter,
+              approxWeight: bag.approxWeight ?? undefined,
+              locationId: bag.locationId,
+              incomingOrderId: bag.incomingOrderId,
+              floor: (bag as { floor?: string }).floor,
+              row: (bag as { row?: string }).row,
+              chamber: (bag as { chamber?: string }).chamber,
+            })),
+          })),
+        }));
+
+        // Enrich with incoming order gatePass numbers
+        const enrichedDaybookOrders = await enrichDaybookOrdersWithIncomingGatePass(daybookOrders);
+
+        // Sort bag sizes
+        sortBagSizes(enrichedDaybookOrders);
+
+        return {
+          data: enrichedDaybookOrders,
+        };
+      }
+
+      case 'all': {
+        const [incomingOrders, outgoingOrders] = await Promise.all([
+          this.fastify.prisma.incomingOrder.findMany({
+            where: where as Prisma.IncomingOrderWhereInput,
+            orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+            select: {
+              id: true,
+              farmerStorageLinkId: true,
+              coldStorageId: true,
+              commodity: true,
+              gatePassType: true,
+              gatePassNumber: true,
+              remarks: true,
+              currentStockAtThatTime: true,
+              varieties: true,
+              date: true,
+              createdAt: true,
+              updatedAt: true,
+              farmerStorageLink: {
+                select: farmerStorageLinkSelect,
+              },
+              createdBy: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          }),
+          this.fastify.prisma.outgoingOrder.findMany({
+            where: where as Prisma.OutgoingOrderWhereInput,
+            orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+            select: {
+              id: true,
+              farmerStorageLinkId: true,
+              coldStorageId: true,
+              commodity: true,
+              gatePassType: true,
+              gatePassNumber: true,
+              remarks: true,
+              currentStockAtThatTime: true,
+              varieties: true,
+              totalBags: true,
+              totalWeight: true,
+              date: true,
+              createdAt: true,
+              updatedAt: true,
+              farmerStorageLink: {
+                select: {
+                  id: true,
+                  farmer: {
+                    select: {
+                      id: true,
+                      name: true,
+                      address: true,
+                      mobileNumber: true,
+                      imageUrl: true,
+                    },
+                  },
+                },
+              },
+              createdBy: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          }),
+        ]);
+
+        // Merge and sort (using efficient merge for pre-sorted arrays)
+        const allOrders: DaybookOrderItem[] = [];
+        let incomingIdx = 0;
+        let outgoingIdx = 0;
+
+        // Merge two sorted arrays efficiently
+        while (incomingIdx < incomingOrders.length || outgoingIdx < outgoingOrders.length) {
+          const incomingOrder = incomingOrders[incomingIdx];
+          const outgoingOrder = outgoingOrders[outgoingIdx];
+
+          if (!incomingOrder) {
+            allOrders.push({
+              id: outgoingOrder.id,
+              type: 'outgoing',
+              farmerStorageLinkId: outgoingOrder.farmerStorageLinkId,
+              coldStorageId: outgoingOrder.coldStorageId,
+              commodity: outgoingOrder.commodity,
+              gatePassType: outgoingOrder.gatePassType,
+              gatePassNumber: outgoingOrder.gatePassNumber,
+              remarks: outgoingOrder.remarks,
+              currentStockAtThatTime: outgoingOrder.currentStockAtThatTime,
+              createdAt: outgoingOrder.createdAt,
+              updatedAt: outgoingOrder.updatedAt,
+              farmerStorageLink: outgoingOrder.farmerStorageLink
+                ? {
+                    id: outgoingOrder.farmerStorageLink.id,
+                    farmer: outgoingOrder.farmerStorageLink.farmer,
+                  }
+                : undefined,
+              totalBags: outgoingOrder.totalBags,
+              totalWeight: outgoingOrder.totalWeight,
+              createdBy: outgoingOrder.createdBy || undefined,
+              varieties: outgoingOrder.varieties?.map((variety) => ({
+                name: variety.name,
+                bagSizes: variety.bagSizes?.map((bag) => ({
+                  name: bag.name,
+                  quantityInit: bag.quantityBefore,
+                  quantityCurr: bag.quantityAfter,
+                  approxWeight: bag.approxWeight ?? undefined,
+                  locationId: bag.locationId,
+                  incomingOrderId: bag.incomingOrderId,
+                })),
+              })),
+            });
+            outgoingIdx++;
+          } else if (!outgoingOrder) {
+            allOrders.push({
+              id: incomingOrder.id,
+              type: 'incoming',
+              farmerStorageLinkId: incomingOrder.farmerStorageLinkId,
+              coldStorageId: incomingOrder.coldStorageId,
+              commodity: incomingOrder.commodity,
+              gatePassType: incomingOrder.gatePassType,
+              gatePassNumber: incomingOrder.gatePassNumber,
+              remarks: incomingOrder.remarks,
+              currentStockAtThatTime: incomingOrder.currentStockAtThatTime,
+              createdAt: incomingOrder.createdAt,
+              updatedAt: incomingOrder.updatedAt,
+              farmerStorageLink: incomingOrder.farmerStorageLink
+                ? {
+                    id: incomingOrder.farmerStorageLink.id,
+                    accountNumber: incomingOrder.farmerStorageLink.accountNumber,
+                    farmer: incomingOrder.farmerStorageLink.farmer,
+                  }
+                : undefined,
+              createdBy: incomingOrder.createdBy || undefined,
+              varieties: incomingOrder.varieties?.map((variety) => ({
+                name: variety.name,
+                bagSizes: variety.bagSizes?.map((bag) => ({
+                  name: bag.name,
+                  quantityInit: bag.quantityInit,
+                  quantityCurr: bag.quantityCurr,
+                  approxWeight: bag.approxWeight ?? undefined,
+                  customMarka: (bag as { customMarka?: string }).customMarka ?? undefined,
+                  locationId: bag.locationId,
+                })),
+              })),
+            });
+            incomingIdx++;
+          } else {
+            // Use date ?? createdAt for comparison
+            const incomingTime = (incomingOrder.date ?? incomingOrder.createdAt).getTime();
+            const outgoingTime = (outgoingOrder.date ?? outgoingOrder.createdAt).getTime();
+
+            if (outgoingTime >= incomingTime) {
+              allOrders.push({
+                id: incomingOrder.id,
+                type: 'incoming',
+                farmerStorageLinkId: incomingOrder.farmerStorageLinkId,
+                coldStorageId: incomingOrder.coldStorageId,
+                commodity: incomingOrder.commodity,
+                gatePassType: incomingOrder.gatePassType,
+                gatePassNumber: incomingOrder.gatePassNumber,
+                remarks: incomingOrder.remarks,
+                currentStockAtThatTime: incomingOrder.currentStockAtThatTime,
+                createdAt: incomingOrder.createdAt,
+                updatedAt: incomingOrder.updatedAt,
+                farmerStorageLink: incomingOrder.farmerStorageLink
+                  ? {
+                      id: incomingOrder.farmerStorageLink.id,
+                      accountNumber: incomingOrder.farmerStorageLink.accountNumber,
+                      farmer: incomingOrder.farmerStorageLink.farmer,
+                    }
+                  : undefined,
+                createdBy: incomingOrder.createdBy || undefined,
+                varieties: incomingOrder.varieties?.map((variety) => ({
+                  name: variety.name,
+                  bagSizes: variety.bagSizes?.map((bag) => ({
+                    name: bag.name,
+                    quantityInit: bag.quantityInit,
+                    quantityCurr: bag.quantityCurr,
+                    approxWeight: bag.approxWeight ?? undefined,
+                    customMarka: (bag as { customMarka?: string }).customMarka ?? undefined,
+                    locationId: bag.locationId,
+                  })),
+                })),
+              });
+              incomingIdx++;
+            } else {
+              allOrders.push({
+                id: outgoingOrder.id,
+                type: 'outgoing',
+                farmerStorageLinkId: outgoingOrder.farmerStorageLinkId,
+                coldStorageId: outgoingOrder.coldStorageId,
+                commodity: outgoingOrder.commodity,
+                gatePassType: outgoingOrder.gatePassType,
+                gatePassNumber: outgoingOrder.gatePassNumber,
+                remarks: outgoingOrder.remarks,
+                currentStockAtThatTime: outgoingOrder.currentStockAtThatTime,
+                createdAt: outgoingOrder.createdAt,
+                updatedAt: outgoingOrder.updatedAt,
+                farmerStorageLink: outgoingOrder.farmerStorageLink
+                  ? {
+                      id: outgoingOrder.farmerStorageLink.id,
+                      farmer: outgoingOrder.farmerStorageLink.farmer,
+                    }
+                  : undefined,
+                totalBags: outgoingOrder.totalBags,
+                totalWeight: outgoingOrder.totalWeight,
+                createdBy: outgoingOrder.createdBy || undefined,
+                varieties: outgoingOrder.varieties?.map((variety) => ({
+                  name: variety.name,
+                  bagSizes: variety.bagSizes?.map((bag) => ({
+                    name: bag.name,
+                    quantityInit: bag.quantityBefore,
+                    quantityCurr: bag.quantityAfter,
+                    approxWeight: bag.approxWeight ?? undefined,
+                    locationId: bag.locationId,
+                    incomingOrderId: bag.incomingOrderId,
+                  })),
+                })),
+              });
+              outgoingIdx++;
+            }
+          }
+        }
+
+        // Enrich with locations (batch fetch)
+        const enrichedOrders = await enrichOrdersWithLocations(allOrders);
+
+        // Enrich with incoming order gatePass numbers
+        const enrichedDaybookOrders = await enrichDaybookOrdersWithIncomingGatePass(enrichedOrders);
+
+        // Sort bag sizes
+        sortBagSizes(enrichedDaybookOrders);
+
+        return {
+          data: enrichedDaybookOrders,
+        };
+      }
+
+      default:
+        throw new StoreAdminValidationError(
+          "Invalid type parameter. Use 'all', 'incoming', or 'outgoing'."
+        );
+    }
   }
 }

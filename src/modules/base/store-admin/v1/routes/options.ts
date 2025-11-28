@@ -778,3 +778,140 @@ export const getGatePassNumberOptions = {
     },
   },
 } as RouteShorthandOptions;
+
+/**
+ * Route options for GET /api/v1/store-admin/farmer-orders
+ * Get all orders (incoming and outgoing) for a specific farmer
+ */
+export const getFarmerOrdersOptions = {
+  schema: {
+    description:
+      'Get all orders (incoming and outgoing) for a specific farmer. No pagination - returns all orders.',
+    tags: ['store-admin'],
+    querystring: {
+      type: 'object',
+      properties: {
+        farmerStorageLinkId: {
+          type: 'string',
+          description: 'Farmer storage link ID to get orders for',
+        },
+        type: {
+          type: 'string',
+          enum: ['all', 'incoming', 'outgoing'],
+          default: 'all',
+          description: 'Filter by order type: all, incoming, or outgoing',
+        },
+      },
+      required: ['farmerStorageLinkId'],
+    },
+    response: {
+      200: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          data: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                id: { type: 'string' },
+                type: { type: 'string', enum: ['incoming', 'outgoing'] },
+                farmerStorageLinkId: { type: 'string' },
+                coldStorageId: { type: 'string', nullable: true },
+                commodity: { type: 'string' },
+                gatePassType: { type: 'string' },
+                gatePassNumber: { type: 'number' },
+                remarks: { type: 'string', nullable: true },
+                currentStockAtThatTime: { type: 'number', nullable: true },
+                createdAt: { type: 'string', format: 'date-time' },
+                updatedAt: { type: 'string', format: 'date-time' },
+                farmerStorageLink: {
+                  type: 'object',
+                  nullable: true,
+                  properties: {
+                    id: { type: 'string' },
+                    accountNumber: { type: 'number' },
+                    farmer: {
+                      type: 'object',
+                      properties: {
+                        id: { type: 'string' },
+                        name: { type: 'string' },
+                        address: { type: 'string' },
+                        mobileNumber: { type: 'string' },
+                        imageUrl: { type: 'string', nullable: true },
+                      },
+                    },
+                  },
+                },
+                varieties: {
+                  type: 'array',
+                  nullable: true,
+                  items: {
+                    type: 'object',
+                    properties: {
+                      name: { type: 'string' },
+                      bagSizes: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            name: { type: 'string' },
+                            quantityInit: { type: 'number' },
+                            quantityCurr: { type: 'number' },
+                            approxWeight: { type: 'number', nullable: true },
+                            customMarka: { type: 'string', nullable: true },
+                            locationId: { type: 'string' },
+                            incomingOrderId: { type: 'string', nullable: true },
+                            floor: { type: 'string', nullable: true },
+                            row: { type: 'string', nullable: true },
+                            chamber: { type: 'string', nullable: true },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+                totalBags: { type: 'number', nullable: true },
+                totalWeight: { type: 'number', nullable: true },
+                createdBy: {
+                  type: 'object',
+                  nullable: true,
+                  properties: {
+                    id: { type: 'string' },
+                    name: { type: 'string' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      400: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          error: {
+            type: 'object',
+            properties: {
+              code: { type: 'string' },
+              message: { type: 'string' },
+            },
+          },
+        },
+      },
+      401: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          error: {
+            type: 'object',
+            properties: {
+              code: { type: 'string' },
+              message: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+  },
+} as RouteShorthandOptions;

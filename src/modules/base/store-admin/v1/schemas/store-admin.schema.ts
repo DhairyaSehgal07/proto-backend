@@ -105,6 +105,21 @@ export const gatePassNumberQuerySchema = z.object({
 });
 
 /**
+ * FARMER ORDERS QUERY schema — for getting all orders of a farmer
+ */
+export const farmerOrdersQuerySchema = z.object({
+  farmerStorageLinkId: z
+    .string()
+    .length(24, 'Invalid MongoDB ObjectId')
+    .describe('Farmer storage link ID to get orders for'),
+  type: z
+    .enum(['all', 'incoming', 'outgoing'])
+    .optional()
+    .default('all')
+    .describe('Filter by order type: all, incoming, or outgoing'),
+});
+
+/**
  * Type Inference (for controller/service layers)
  */
 export type CreateStoreAdminInput = z.infer<typeof createStoreAdminSchema>;
@@ -115,3 +130,4 @@ export type LoginStoreAdminInput = z.infer<typeof loginStoreAdminSchema>;
 export type RegisterFarmerInput = z.infer<typeof registerFarmerSchema>;
 export type DaybookQuery = z.infer<typeof daybookQuerySchema>;
 export type GatePassNumberQuery = z.infer<typeof gatePassNumberQuerySchema>;
+export type FarmerOrdersQuery = z.infer<typeof farmerOrdersQuerySchema>;

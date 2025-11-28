@@ -21,6 +21,7 @@ import type {
   RegisterFarmerInput,
   DaybookQuery,
   GatePassNumberQuery,
+  FarmerOrdersQuery,
 } from '../schemas/store-admin.schema.js';
 
 // Route-level types
@@ -59,6 +60,10 @@ interface DaybookRequestParams {
 
 interface GatePassNumberRequestParams {
   Querystring: GatePassNumberQuery;
+}
+
+interface FarmerOrdersRequestParams {
+  Querystring: FarmerOrdersQuery;
 }
 
 /**
@@ -437,6 +442,53 @@ export class StoreAdminController {
       reply.code(200).send({
         success: true,
         data: result,
+      });
+    } catch (error) {
+      this.handleError(error, reply);
+    }
+  }
+
+  /**
+   * GET /store-admin/farmer-orders - Get all orders (incoming and outgoing) for a specific farmer
+   */
+  async getFarmerOrders(
+    request: FastifyRequest<FarmerOrdersRequestParams>,
+    reply: FastifyReply
+  ): Promise<void> {
+    try {
+      if (!request.admin) {
+        reply.code(401).send({
+          success: false,
+          error: {
+            code: 'AUTHENTICATION_REQUIRED',
+            message: 'Authentication required',
+          },
+        });
+        return;
+      }
+
+      if (!request.admin.coldStorageId) {
+        reply.code(400).send({
+          success: false,
+          error: {
+            code: 'MISSING_COLD_STORAGE',
+            message: 'Missing cold storage context',
+          },
+        });
+        return;
+      }
+
+      const { farmerStorageLinkId, type } = request.query;
+
+      const result = await this.service.getFarmerOrders(
+        request.admin.coldStorageId,
+        farmerStorageLinkId,
+        type ?? 'all'
+      );
+
+      reply.code(200).send({
+        success: true,
+        data: result.data,
       });
     } catch (error) {
       this.handleError(error, reply);

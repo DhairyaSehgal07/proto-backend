@@ -9,6 +9,7 @@ import {
   registerFarmerSchema,
   daybookQuerySchema,
   gatePassNumberQuerySchema,
+  farmerOrdersQuerySchema,
 } from '../schemas/store-admin.schema.js';
 
 /**
@@ -200,6 +201,37 @@ export function validateGatePassNumberQuery(
 ): void {
   try {
     const validated = gatePassNumberQuerySchema.parse(request.query);
+    request.query = validated;
+    done();
+  } catch (error) {
+    if (error instanceof ZodError) {
+      reply.code(400).send({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid query parameters',
+          details: error.issues.map((e) => ({
+            path: e.path.join('.'),
+            message: e.message,
+          })),
+        },
+      });
+      return;
+    }
+    throw error;
+  }
+}
+
+/**
+ * Farmer orders query validator
+ */
+export function validateFarmerOrdersQuery(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  done: (err?: Error) => void
+): void {
+  try {
+    const validated = farmerOrdersQuerySchema.parse(request.query);
     request.query = validated;
     done();
   } catch (error) {

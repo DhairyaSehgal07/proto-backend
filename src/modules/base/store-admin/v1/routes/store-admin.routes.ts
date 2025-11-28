@@ -13,6 +13,7 @@ import {
   RegisterFarmerInput,
   DaybookQuery,
   GatePassNumberQuery,
+  FarmerOrdersQuery,
 } from '../schemas/store-admin.schema.js';
 import { authenticateAdmin } from '@/core/middleware/auth.middleware.js';
 import { requirePermission } from '@/core/middleware/permission.middleware.js';
@@ -28,6 +29,7 @@ import {
   daybookOptions,
   getFarmersOptions,
   getGatePassNumberOptions,
+  getFarmerOrdersOptions,
 } from './options.js';
 import {
   createBodyValidator,
@@ -37,6 +39,7 @@ import {
   validateQuery,
   validateDaybookQuery,
   validateGatePassNumberQuery,
+  validateFarmerOrdersQuery,
 } from './validators.js';
 
 /**
@@ -77,6 +80,10 @@ interface DaybookRequestParams {
 
 interface GatePassNumberRequestParams {
   Querystring: GatePassNumberQuery;
+}
+
+interface FarmerOrdersRequestParams {
+  Querystring: FarmerOrdersQuery;
 }
 
 /**
@@ -265,6 +272,21 @@ function storeAdminRoutes(fastify: FastifyInstance, _options: FastifyPluginOptio
         request as FastifyRequest<GatePassNumberRequestParams>,
         reply
       );
+    }
+  );
+
+  /**
+   * GET /api/v1/store-admin/farmer-orders
+   * Get all orders (incoming and outgoing) for a specific farmer
+   */
+  fastify.get(
+    '/farmer/orders',
+    {
+      ...getFarmerOrdersOptions,
+      preHandler: [authenticateAdmin, validateFarmerOrdersQuery],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      await controller.getFarmerOrders(request as FastifyRequest<FarmerOrdersRequestParams>, reply);
     }
   );
 }

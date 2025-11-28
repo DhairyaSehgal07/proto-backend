@@ -67,8 +67,9 @@ export class IncomingOrderService {
 
       // Empty array is allowed for null vouchers - skip validation
       if (data.varieties.length === 0) {
-        // Null voucher - varieties will be empty array, remarks can still be stored
-        // No further validation needed
+        if (!data.remarks || data.remarks.trim() === '') {
+          throw new IncomingOrderValidationError('please provide remarks');
+        }
       } else {
         // Non-empty array - validate each variety has bagSizes
         for (const variety of data.varieties) {

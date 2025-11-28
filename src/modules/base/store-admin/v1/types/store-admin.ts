@@ -253,3 +253,10 @@ export interface GatePassNumberResponse {
   coldStorageId: string;
   type: 'incoming' | 'outgoing';
 }
+
+/**
+ * Farmer orders response type (no pagination, returns all orders)
+ */
+export interface FarmerOrdersResponse {
+  data: DaybookOrderItem[];
+}
