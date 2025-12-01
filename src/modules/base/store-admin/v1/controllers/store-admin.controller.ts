@@ -116,7 +116,7 @@ export class StoreAdminController {
         reply.setCookie('jwt', result.token, {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production', // HTTPS only in production
-          sameSite: 'strict',
+          sameSite: 'none',
           maxAge: sevenDaysInMs / 1000, // maxAge is in seconds
           path: '/',
         });
