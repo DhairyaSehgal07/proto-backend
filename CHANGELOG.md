@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.5.0](https://github.com/DhairyaSehgal07/proto-backend/compare/v0.4.2...v0.5.0) (2025-12-01)
+
+### ### Added
+
+- **store-admin:** add mobile/web auth support and farmer detail endpoint ([17a0bf3](https://github.com/DhairyaSehgal07/proto-backend/commit/17a0bf385210db25d33e3adca89ebac74d67a725))
+- **store-admin:** enhance store-admin module with routes, services, and validators ([d92539a](https://github.com/DhairyaSehgal07/proto-backend/commit/d92539ac8ce50fdb80f744f493df8be0bf145b5c))
+
 ### [0.4.2](https://github.com/DhairyaSehgal07/proto-backend/compare/v0.4.1...v0.4.2) (2025-11-17)
 
 ### ### Changed
