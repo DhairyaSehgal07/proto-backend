@@ -15,7 +15,7 @@ export const createStoreAdminSchema = z.object({
       /^\+[1-9]\d{1,3}\d{7,15}$/,
       'Mobile number must include country code (e.g., +919876543210)'
     ),
-  password: z.string().min(8, 'Password must be at least 8 characters long'),
+  password: z.string().min(6, 'Password must be at least 6 characters long'),
 
   role: RoleEnum.optional().default('Manager'),
   isVerified: z.boolean().optional().default(true),
@@ -120,6 +120,13 @@ export const farmerOrdersQuerySchema = z.object({
 });
 
 /**
+ * FARMER STORAGE LINK ID PARAM schema — for getting farmer by farmerStorageLinkId
+ */
+export const farmerStorageLinkIdParamSchema = z.object({
+  id: z.string().length(24, 'Invalid MongoDB ObjectId'),
+});
+
+/**
  * Type Inference (for controller/service layers)
  */
 export type CreateStoreAdminInput = z.infer<typeof createStoreAdminSchema>;
@@ -131,3 +138,4 @@ export type RegisterFarmerInput = z.infer<typeof registerFarmerSchema>;
 export type DaybookQuery = z.infer<typeof daybookQuerySchema>;
 export type GatePassNumberQuery = z.infer<typeof gatePassNumberQuerySchema>;
 export type FarmerOrdersQuery = z.infer<typeof farmerOrdersQuerySchema>;
+export type FarmerStorageLinkIdParam = z.infer<typeof farmerStorageLinkIdParamSchema>;

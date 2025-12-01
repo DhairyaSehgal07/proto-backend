@@ -22,6 +22,7 @@ import type {
   DaybookQuery,
   GatePassNumberQuery,
   FarmerOrdersQuery,
+  FarmerStorageLinkIdParam,
 } from '../schemas/store-admin.schema.js';
 
 // Route-level types
@@ -66,6 +67,10 @@ interface FarmerOrdersRequestParams {
   Querystring: FarmerOrdersQuery;
 }
 
+interface GetFarmerByIdRequestParams {
+  Params: FarmerStorageLinkIdParam;
+}
+
 /**
  * Controller for StoreAdmin endpoints
  */
@@ -78,7 +83,8 @@ export class StoreAdminController {
 
   /**
    * POST /store-admin/login - Login store admin
-   * Returns JWT token in JSON response (cookie handling done by Next.js API route)
+   * If isMobile is true: Returns JWT token in JSON response
+   * If isMobile is false or not provided: Sets JWT token in cookie (7 days validity)
    */
   async login(
     request: FastifyRequest<LoginStoreAdminRequestParams>,
@@ -91,16 +97,39 @@ export class StoreAdminController {
         request
       );
 
-      // Return token in JSON response (Next.js API route will handle cookie setting)
-      reply.code(200).send({
-        success: true,
-        message: 'Login successful',
-        data: {
-          token: result.token,
-          admin: result.admin,
-          coldStorage: result.coldStorage,
-        },
-      });
+      const isMobile = request.body.isMobile === true;
+
+      if (isMobile) {
+        // Mobile client: return token in JSON response
+        reply.code(200).send({
+          success: true,
+          message: 'Login successful',
+          data: {
+            token: result.token,
+            admin: result.admin,
+            coldStorage: result.coldStorage,
+          },
+        });
+      } else {
+        // Web client: set token in cookie with 7 days validity
+        const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+        reply.setCookie('jwt', result.token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+          sameSite: 'strict',
+          maxAge: sevenDaysInMs / 1000, // maxAge is in seconds
+          path: '/',
+        });
+
+        reply.code(200).send({
+          success: true,
+          message: 'Login successful',
+          data: {
+            admin: result.admin,
+            coldStorage: result.coldStorage,
+          },
+        });
+      }
     } catch (error) {
       this.handleError(error, reply);
     }
@@ -108,11 +137,19 @@ export class StoreAdminController {
 
   /**
    * POST /store-admin/logout - Logout store admin
-   * Cookie clearing handled by Next.js API route
+   * Clears the JWT cookie
    */
   async logout(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     try {
       await this.service.logout();
+
+      // Clear the JWT cookie
+      reply.clearCookie('jwt', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+      });
 
       reply.code(200).send({
         success: true,
@@ -373,6 +410,48 @@ export class StoreAdminController {
       reply.code(200).send({
         success: true,
         data: result.data,
+      });
+    } catch (error) {
+      this.handleError(error, reply);
+    }
+  }
+
+  /**
+   * GET /store-admin/farmers/:id - Get farmer details by farmerStorageLinkId
+   */
+  async getFarmerById(
+    request: FastifyRequest<GetFarmerByIdRequestParams>,
+    reply: FastifyReply
+  ): Promise<void> {
+    try {
+      if (!request.admin) {
+        reply.code(401).send({
+          success: false,
+          error: {
+            code: 'AUTHENTICATION_REQUIRED',
+            message: 'Authentication required',
+          },
+        });
+        return;
+      }
+
+      if (!request.admin.coldStorageId) {
+        reply.code(400).send({
+          success: false,
+          error: {
+            code: 'MISSING_COLD_STORAGE',
+            message: 'Missing cold storage context',
+          },
+        });
+        return;
+      }
+
+      const { id } = request.params;
+      const result = await this.service.getFarmerById(id, request.admin.coldStorageId);
+
+      reply.code(200).send({
+        success: true,
+        data: result,
       });
     } catch (error) {
       this.handleError(error, reply);

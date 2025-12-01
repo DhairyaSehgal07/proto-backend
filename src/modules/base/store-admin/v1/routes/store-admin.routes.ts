@@ -14,6 +14,7 @@ import {
   DaybookQuery,
   GatePassNumberQuery,
   FarmerOrdersQuery,
+  FarmerStorageLinkIdParam,
 } from '../schemas/store-admin.schema.js';
 import { authenticateAdmin } from '@/core/middleware/auth.middleware.js';
 import { requirePermission } from '@/core/middleware/permission.middleware.js';
@@ -28,6 +29,7 @@ import {
   registerFarmerOptions,
   daybookOptions,
   getFarmersOptions,
+  getFarmerByIdOptions,
   getGatePassNumberOptions,
   getFarmerOrdersOptions,
 } from './options.js';
@@ -40,6 +42,7 @@ import {
   validateDaybookQuery,
   validateGatePassNumberQuery,
   validateFarmerOrdersQuery,
+  validateFarmerStorageLinkIdParam,
 } from './validators.js';
 
 /**
@@ -84,6 +87,10 @@ interface GatePassNumberRequestParams {
 
 interface FarmerOrdersRequestParams {
   Querystring: FarmerOrdersQuery;
+}
+
+interface GetFarmerByIdRequestParams {
+  Params: FarmerStorageLinkIdParam;
 }
 
 /**
@@ -243,7 +250,7 @@ function storeAdminRoutes(fastify: FastifyInstance, _options: FastifyPluginOptio
   );
 
   /**
-   * GET /api/v1/store-admin/farmer
+   * GET /api/v1/store-admin/farmers
    * Get all farmers for the logged-in store admin's cold storage
    */
   fastify.get(
@@ -254,6 +261,21 @@ function storeAdminRoutes(fastify: FastifyInstance, _options: FastifyPluginOptio
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       await controller.getFarmers(request, reply);
+    }
+  );
+
+  /**
+   * GET /api/v1/store-admin/farmers/:id
+   * Get farmer details by farmerStorageLinkId with populated farmer and linkedBy
+   */
+  fastify.get(
+    '/farmers/:id',
+    {
+      ...getFarmerByIdOptions,
+      preHandler: [authenticateAdmin, validateFarmerStorageLinkIdParam],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      await controller.getFarmerById(request as FastifyRequest<GetFarmerByIdRequestParams>, reply);
     }
   );
 

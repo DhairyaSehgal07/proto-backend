@@ -36,10 +36,13 @@ export const logoutOptions = {
 /**
  * Route options for POST /api/v1/store-admin/login
  * Login store admin
+ * If isMobile is true: Returns JWT token in JSON response
+ * If isMobile is false or not provided: Sets JWT token in cookie (7 days validity)
  */
 export const loginOptions = {
   schema: {
-    description: 'Login store admin',
+    description:
+      'Login store admin. If isMobile is true, returns token in response. Otherwise, sets token in cookie.',
     tags: ['store-admin'],
     response: {
       200: {
@@ -50,7 +53,10 @@ export const loginOptions = {
           data: {
             type: 'object',
             properties: {
-              token: { type: 'string', description: 'JWT token for authentication' },
+              token: {
+                type: 'string',
+                description: 'JWT token for authentication (only returned when isMobile is true)',
+              },
               admin: {
                 type: 'object',
                 properties: {
@@ -137,7 +143,7 @@ export const loginOptions = {
                 ],
               },
             },
-            required: ['token', 'admin', 'coldStorage'],
+            required: ['admin', 'coldStorage'],
           },
         },
       },
@@ -763,6 +769,108 @@ export const getGatePassNumberOptions = {
         },
       },
       401: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          error: {
+            type: 'object',
+            properties: {
+              code: { type: 'string' },
+              message: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+  },
+} as RouteShorthandOptions;
+
+/**
+ * Route options for GET /api/v1/store-admin/farmers/:id
+ * Get farmer details by farmerStorageLinkId
+ */
+export const getFarmerByIdOptions = {
+  schema: {
+    description: 'Get farmer details by farmerStorageLinkId with populated farmer and linkedBy',
+    tags: ['store-admin'],
+    response: {
+      200: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          data: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', description: 'Farmer storage link ID' },
+              farmerId: { type: 'string', description: 'Farmer document ID' },
+              coldStorageId: { type: 'string' },
+              accountNumber: { type: 'number' },
+              isActive: { type: 'boolean' },
+              notes: { type: 'string', nullable: true },
+              createdAt: { type: 'string', format: 'date-time' },
+              updatedAt: { type: 'string', format: 'date-time' },
+              farmer: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  name: { type: 'string' },
+                  address: { type: 'string' },
+                  mobileNumber: { type: 'string' },
+                },
+                required: ['id', 'name', 'address', 'mobileNumber'],
+              },
+              linkedBy: {
+                type: 'object',
+                nullable: true,
+                properties: {
+                  id: { type: 'string' },
+                  name: { type: 'string' },
+                },
+                required: ['id', 'name'],
+              },
+            },
+            required: [
+              'id',
+              'farmerId',
+              'coldStorageId',
+              'accountNumber',
+              'isActive',
+              'notes',
+              'createdAt',
+              'updatedAt',
+              'farmer',
+              'linkedBy',
+            ],
+          },
+        },
+      },
+      400: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          error: {
+            type: 'object',
+            properties: {
+              code: { type: 'string' },
+              message: { type: 'string' },
+            },
+          },
+        },
+      },
+      401: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          error: {
+            type: 'object',
+            properties: {
+              code: { type: 'string' },
+              message: { type: 'string' },
+            },
+          },
+        },
+      },
+      404: {
         type: 'object',
         properties: {
           success: { type: 'boolean' },

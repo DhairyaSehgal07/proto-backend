@@ -10,6 +10,7 @@ import {
   daybookQuerySchema,
   gatePassNumberQuerySchema,
   farmerOrdersQuerySchema,
+  farmerStorageLinkIdParamSchema,
 } from '../schemas/store-admin.schema.js';
 
 /**
@@ -241,6 +242,37 @@ export function validateFarmerOrdersQuery(
         error: {
           code: 'VALIDATION_ERROR',
           message: 'Invalid query parameters',
+          details: error.issues.map((e) => ({
+            path: e.path.join('.'),
+            message: e.message,
+          })),
+        },
+      });
+      return;
+    }
+    throw error;
+  }
+}
+
+/**
+ * Farmer storage link ID param validator (/api/v1/store-admin/farmers/:id)
+ */
+export function validateFarmerStorageLinkIdParam(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  done: (err?: Error) => void
+): void {
+  try {
+    const validated = farmerStorageLinkIdParamSchema.parse(request.params);
+    request.params = validated;
+    done();
+  } catch (error) {
+    if (error instanceof ZodError) {
+      reply.code(400).send({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid route parameters',
           details: error.issues.map((e) => ({
             path: e.path.join('.'),
             message: e.message,

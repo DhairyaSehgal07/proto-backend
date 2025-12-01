@@ -47,7 +47,7 @@ export const buildApp = async (): Promise<FastifyInstance> => {
 
   // Register CORS
   await fastify.register(cors, {
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000', // must NOT be '*'
+    origin: process.env.CORS_ORIGIN || 'http://localhost:5173', // must NOT be '*'
     credentials: true, // ✅ allow cookies
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],

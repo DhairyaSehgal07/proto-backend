@@ -18,6 +18,7 @@ import type {
   FarmerResponse,
   GatePassNumberResponse,
   FarmerOrdersResponse,
+  FarmerDetailResponse,
 } from '../types/store-admin.js';
 import {
   Prisma,
@@ -150,6 +151,10 @@ export class StoreAdminService {
       throw new StoreAdminValidationError(mobileValidation.error || 'Invalid mobile number format');
     }
 
+    // Normalize mobile number (remove country code) - database stores without country code
+    const normalizedMobileNumber =
+      mobileValidation.number || data.mobileNumber.replace(/^\+\d{1,3}/, '');
+
     // Validate password complexity
     const passwordValidation = validatePassword(data.password);
     if (!passwordValidation.isValid) {
@@ -162,10 +167,10 @@ export class StoreAdminService {
       throw new StoreAdminValidationError('Cold storage ID is required');
     }
 
-    // Check if mobile number already exists for this cold storage
+    // Check if mobile number already exists for this cold storage (use normalized number)
     const existing = await this.dao.findAll({
       where: {
-        mobileNumber: data.mobileNumber,
+        mobileNumber: normalizedMobileNumber,
         coldStorageId: data.coldStorageId,
       },
       take: 1,
@@ -193,7 +198,7 @@ export class StoreAdminService {
       coldStorageId: data.coldStorageId,
       name: data.name.trim(),
       personalAddress: data.personalAddress?.trim() ?? null,
-      mobileNumber: data.mobileNumber.trim(),
+      mobileNumber: normalizedMobileNumber.trim(),
       password: hashedPassword,
       role: data.role ?? 'Manager',
       isVerified: data.isVerified ?? false,
@@ -223,6 +228,7 @@ export class StoreAdminService {
     }
 
     // Validate mobile number if provided
+    let normalizedMobileNumber: string | undefined;
     if (data.mobileNumber !== undefined) {
       const mobileValidation = validateMobileNumber(data.mobileNumber);
       if (!mobileValidation.isValid) {
@@ -231,10 +237,14 @@ export class StoreAdminService {
         );
       }
 
-      // Check if mobile number is already used by another store admin in the same cold storage
+      // Normalize mobile number (remove country code) - database stores without country code
+      normalizedMobileNumber =
+        mobileValidation.number || data.mobileNumber.replace(/^\+\d{1,3}/, '');
+
+      // Check if mobile number is already used by another store admin in the same cold storage (use normalized number)
       const existing = await this.dao.findAll({
         where: {
-          mobileNumber: data.mobileNumber,
+          mobileNumber: normalizedMobileNumber,
           coldStorageId: existingStoreAdmin.coldStorageId,
           id: { not: id },
         },
@@ -264,7 +274,7 @@ export class StoreAdminService {
       ...(data.personalAddress !== undefined && {
         personalAddress: data.personalAddress?.trim() ?? null,
       }),
-      ...(data.mobileNumber !== undefined && { mobileNumber: data.mobileNumber.trim() }),
+      ...(normalizedMobileNumber !== undefined && { mobileNumber: normalizedMobileNumber.trim() }),
       ...(data.role !== undefined && { role: data.role }),
       ...(data.isVerified !== undefined && { isVerified: data.isVerified }),
     };
@@ -1447,6 +1457,73 @@ export class StoreAdminService {
     }));
 
     return { data };
+  }
+
+  /**
+   * Get farmer details by farmerStorageLinkId
+   * Returns farmerStorageLink document with populated farmerId (name, address, mobileNumber)
+   * and populated linkedById (name and id of store admin)
+   */
+  async getFarmerById(
+    farmerStorageLinkId: string,
+    coldStorageId: string
+  ): Promise<FarmerDetailResponse> {
+    // Query farmer storage link with populated farmer and linkedBy
+    const link = await this.fastify.prisma.farmerStorageLink.findUnique({
+      where: {
+        id: farmerStorageLinkId,
+      },
+      include: {
+        farmer: {
+          select: {
+            id: true,
+            name: true,
+            address: true,
+            mobileNumber: true,
+          },
+        },
+        linkedBy: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (!link) {
+      throw new StoreAdminNotFoundError(farmerStorageLinkId);
+    }
+
+    // Verify the link belongs to the cold storage
+    if (link.coldStorageId !== coldStorageId) {
+      throw new StoreAdminValidationError(
+        'Farmer storage link does not belong to this cold storage'
+      );
+    }
+
+    return {
+      id: link.id,
+      farmerId: link.farmerId,
+      coldStorageId: link.coldStorageId,
+      accountNumber: link.accountNumber,
+      isActive: link.isActive,
+      notes: link.notes,
+      createdAt: link.createdAt,
+      updatedAt: link.updatedAt,
+      farmer: {
+        id: link.farmer.id,
+        name: link.farmer.name,
+        address: link.farmer.address,
+        mobileNumber: link.farmer.mobileNumber,
+      },
+      linkedBy: link.linkedBy
+        ? {
+            id: link.linkedBy.id,
+            name: link.linkedBy.name,
+          }
+        : null,
+    };
   }
 
   /**

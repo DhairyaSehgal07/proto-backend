@@ -260,3 +260,27 @@ export interface GatePassNumberResponse {
 export interface FarmerOrdersResponse {
   data: DaybookOrderItem[];
 }
+
+/**
+ * Farmer detail response type (farmerStorageLink with populated farmer and linkedBy)
+ */
+export interface FarmerDetailResponse {
+  id: string; // farmerStorageLink id
+  farmerId: string; // farmer document id
+  coldStorageId: string;
+  accountNumber: number;
+  isActive: boolean;
+  notes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  farmer: {
+    id: string;
+    name: string;
+    address: string;
+    mobileNumber: string;
+  };
+  linkedBy: {
+    id: string;
+    name: string;
+  } | null;
+}
