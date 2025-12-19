@@ -523,6 +523,7 @@ export const daybookOptions = {
                 commodity: { type: 'string' },
                 gatePassType: { type: 'string' },
                 gatePassNumber: { type: 'number' },
+                date: { type: ['string', 'null'], format: 'date-time' },
                 remarks: { type: 'string', nullable: true },
                 currentStockAtThatTime: { type: 'number', nullable: true },
                 createdAt: { type: 'string', format: 'date-time' },
@@ -987,6 +988,191 @@ export const getFarmerOrdersOptions = {
                   properties: {
                     id: { type: 'string' },
                     name: { type: 'string' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      400: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          error: {
+            type: 'object',
+            properties: {
+              code: { type: 'string' },
+              message: { type: 'string' },
+            },
+          },
+        },
+      },
+      401: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          error: {
+            type: 'object',
+            properties: {
+              code: { type: 'string' },
+              message: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+  },
+} as RouteShorthandOptions;
+
+/**
+ * Route options for GET /api/v1/store-admin/analytics/overview
+ * Get cold storage analytics overview
+ */
+export const coldStorageAnalyticsOptions = {
+  schema: {
+    description:
+      'Get cold storage analytics overview with summary, commodity breakdown, stock trends, and location analytics',
+    tags: ['store-admin'],
+    querystring: {
+      type: 'object',
+      properties: {
+        coldStorageId: {
+          type: 'string',
+          description: 'Cold storage ID (required)',
+        },
+        dateFrom: {
+          type: 'string',
+          format: 'date-time',
+          description: 'Start date for filtering (ISO 8601 format)',
+        },
+        dateTo: {
+          type: 'string',
+          format: 'date-time',
+          description: 'End date for filtering (ISO 8601 format)',
+        },
+        commodity: {
+          type: 'string',
+          enum: ['POTATO', 'ONION', 'GARLIC', 'TOMATO', 'CARROT', 'APPLE', 'SWEETS', 'OTHER'],
+          description: 'Filter by commodity type',
+        },
+        farmerId: {
+          type: 'string',
+          description: 'Filter by farmer storage link ID',
+        },
+        locationId: {
+          type: 'string',
+          description: 'Filter by location ID',
+        },
+      },
+      required: ['coldStorageId'],
+    },
+    response: {
+      200: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          data: {
+            type: 'object',
+            properties: {
+              meta: {
+                type: 'object',
+                properties: {
+                  coldStorageId: { type: 'string' },
+                  generatedAt: { type: 'string', format: 'date-time' },
+                  unit: { type: 'string' },
+                },
+              },
+              summary: {
+                type: 'object',
+                properties: {
+                  totalBagsInitial: { type: 'number' },
+                  totalBagsCurrent: { type: 'number' },
+                  totalIncomingBags: { type: 'number' },
+                  totalOutgoingBags: { type: 'number' },
+                },
+              },
+              commoditySummary: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    commodity: { type: 'string' },
+                    totalCurrent: { type: 'number' },
+                    varieties: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          varietyName: { type: 'string' },
+                          totalCurrent: { type: 'number' },
+                          bagSizes: {
+                            type: 'array',
+                            items: {
+                              type: 'object',
+                              properties: {
+                                size: { type: 'string' },
+                                totalInitial: { type: 'number' },
+                                totalCurrent: { type: 'number' },
+                                totalOutgoing: { type: 'number' },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+              stockTrend: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    date: { type: 'string', format: 'date-time' },
+                    incoming: { type: 'number' },
+                    outgoing: { type: 'number' },
+                    netChange: { type: 'number' },
+                    totalStock: { type: 'number' },
+                  },
+                },
+              },
+              locationAnalytics: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    locationId: { type: 'string' },
+                    floor: { type: 'string' },
+                    row: { type: 'string' },
+                    chamber: { type: 'string' },
+                    totalCurrentBags: { type: 'number' },
+                    breakdownByFarmer: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          farmerId: { type: 'string' },
+                          farmerName: { type: 'string' },
+                          accountNumber: { type: 'number' },
+                          totalCurrentBags: { type: 'number' },
+                          details: {
+                            type: 'array',
+                            items: {
+                              type: 'object',
+                              properties: {
+                                commodity: { type: 'string' },
+                                variety: { type: 'string' },
+                                size: { type: 'string' },
+                                storedOn: { type: 'string', format: 'date-time' },
+                                initialQuantity: { type: 'number' },
+                                currentQuantity: { type: 'number' },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
                   },
                 },
               },

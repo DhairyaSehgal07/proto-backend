@@ -50,6 +50,7 @@ export interface CreateIncomingOrderRequest {
   commodity: Commodity;
   gatePassNumber: number;
   gatePassType?: GatePassType;
+  date?: Date;
   remarks?: string;
   currentStockAtThatTime?: number;
   varieties?: VarietyInput[];
@@ -63,6 +64,7 @@ export interface UpdateIncomingOrderRequest {
   commodity?: Commodity;
   gatePassNumber?: number;
   gatePassType?: GatePassType;
+  date?: Date;
   remarks?: string;
   currentStockAtThatTime?: number;
   varieties?: VarietyInput[];
@@ -78,6 +80,7 @@ export interface IncomingOrderResponse {
   commodity: Commodity;
   gatePassType: GatePassType;
   gatePassNumber: number;
+  date: Date | null;
   remarks: string | null;
   currentStockAtThatTime: number | null;
   varieties: ProcessedVariety[];

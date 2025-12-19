@@ -15,6 +15,7 @@ import {
   GatePassNumberQuery,
   FarmerOrdersQuery,
   FarmerStorageLinkIdParam,
+  ColdStorageAnalyticsQuery,
 } from '../schemas/store-admin.schema.js';
 import { authenticateAdmin } from '@/core/middleware/auth.middleware.js';
 import { requirePermission } from '@/core/middleware/permission.middleware.js';
@@ -32,6 +33,7 @@ import {
   getFarmerByIdOptions,
   getGatePassNumberOptions,
   getFarmerOrdersOptions,
+  coldStorageAnalyticsOptions,
 } from './options.js';
 import {
   createBodyValidator,
@@ -43,6 +45,7 @@ import {
   validateGatePassNumberQuery,
   validateFarmerOrdersQuery,
   validateFarmerStorageLinkIdParam,
+  validateColdStorageAnalyticsQuery,
 } from './validators.js';
 
 /**
@@ -91,6 +94,10 @@ interface FarmerOrdersRequestParams {
 
 interface GetFarmerByIdRequestParams {
   Params: FarmerStorageLinkIdParam;
+}
+
+interface ColdStorageAnalyticsRequestParams {
+  Querystring: ColdStorageAnalyticsQuery;
 }
 
 /**
@@ -309,6 +316,24 @@ function storeAdminRoutes(fastify: FastifyInstance, _options: FastifyPluginOptio
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       await controller.getFarmerOrders(request as FastifyRequest<FarmerOrdersRequestParams>, reply);
+    }
+  );
+
+  /**
+   * GET /api/v1/store-admin/analytics/overview
+   * Get cold storage analytics overview
+   */
+  fastify.get(
+    '/analytics/overview',
+    {
+      ...coldStorageAnalyticsOptions,
+      preHandler: [authenticateAdmin, validateColdStorageAnalyticsQuery],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      await controller.getColdStorageAnalytics(
+        request as FastifyRequest<ColdStorageAnalyticsRequestParams>,
+        reply
+      );
     }
   );
 }

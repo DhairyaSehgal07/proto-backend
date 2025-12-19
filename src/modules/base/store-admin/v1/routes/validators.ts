@@ -11,6 +11,7 @@ import {
   gatePassNumberQuerySchema,
   farmerOrdersQuerySchema,
   farmerStorageLinkIdParamSchema,
+  coldStorageAnalyticsQuerySchema,
 } from '../schemas/store-admin.schema.js';
 
 /**
@@ -273,6 +274,37 @@ export function validateFarmerStorageLinkIdParam(
         error: {
           code: 'VALIDATION_ERROR',
           message: 'Invalid route parameters',
+          details: error.issues.map((e) => ({
+            path: e.path.join('.'),
+            message: e.message,
+          })),
+        },
+      });
+      return;
+    }
+    throw error;
+  }
+}
+
+/**
+ * Cold storage analytics query validator
+ */
+export function validateColdStorageAnalyticsQuery(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  done: (err?: Error) => void
+): void {
+  try {
+    const validated = coldStorageAnalyticsQuerySchema.parse(request.query);
+    request.query = validated;
+    done();
+  } catch (error) {
+    if (error instanceof ZodError) {
+      reply.code(400).send({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid query parameters',
           details: error.issues.map((e) => ({
             path: e.path.join('.'),
             message: e.message,

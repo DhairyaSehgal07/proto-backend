@@ -127,6 +127,40 @@ export const farmerStorageLinkIdParamSchema = z.object({
 });
 
 /**
+ * COLD STORAGE ANALYTICS QUERY schema — for analytics overview endpoint
+ */
+export const coldStorageAnalyticsQuerySchema = z.object({
+  coldStorageId: z
+    .string()
+    .length(24, 'Invalid MongoDB ObjectId')
+    .describe('Cold storage ID (required)'),
+  dateFrom: z
+    .string()
+    .datetime('Invalid date format. Use ISO 8601 format (e.g., 2024-01-01T00:00:00Z)')
+    .optional()
+    .describe('Start date for filtering (ISO 8601 format)'),
+  dateTo: z
+    .string()
+    .datetime('Invalid date format. Use ISO 8601 format (e.g., 2024-12-31T23:59:59Z)')
+    .optional()
+    .describe('End date for filtering (ISO 8601 format)'),
+  commodity: z
+    .enum(['POTATO', 'ONION', 'GARLIC', 'TOMATO', 'CARROT', 'APPLE', 'SWEETS', 'OTHER'])
+    .optional()
+    .describe('Filter by commodity type'),
+  farmerId: z
+    .string()
+    .length(24, 'Invalid MongoDB ObjectId')
+    .optional()
+    .describe('Filter by farmer storage link ID'),
+  locationId: z
+    .string()
+    .length(24, 'Invalid MongoDB ObjectId')
+    .optional()
+    .describe('Filter by location ID'),
+});
+
+/**
  * Type Inference (for controller/service layers)
  */
 export type CreateStoreAdminInput = z.infer<typeof createStoreAdminSchema>;
@@ -139,3 +173,4 @@ export type DaybookQuery = z.infer<typeof daybookQuerySchema>;
 export type GatePassNumberQuery = z.infer<typeof gatePassNumberQuerySchema>;
 export type FarmerOrdersQuery = z.infer<typeof farmerOrdersQuerySchema>;
 export type FarmerStorageLinkIdParam = z.infer<typeof farmerStorageLinkIdParamSchema>;
+export type ColdStorageAnalyticsQuery = z.infer<typeof coldStorageAnalyticsQuerySchema>;

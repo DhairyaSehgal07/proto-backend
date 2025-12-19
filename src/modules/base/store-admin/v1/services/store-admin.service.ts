@@ -989,6 +989,7 @@ export class StoreAdminService {
           coldStorageId: order.coldStorageId,
           commodity: order.commodity,
           gatePassType: order.gatePassType,
+          date: order.date || order.createdAt,
           gatePassNumber: order.gatePassNumber,
           remarks: order.remarks,
           currentStockAtThatTime: order.currentStockAtThatTime,
@@ -1093,6 +1094,7 @@ export class StoreAdminService {
           type: 'outgoing' as const,
           farmerStorageLinkId: order.farmerStorageLinkId,
           coldStorageId: order.coldStorageId,
+          date: order.date || order.createdAt,
           commodity: order.commodity,
           gatePassType: order.gatePassType,
           gatePassNumber: order.gatePassNumber,
@@ -1248,6 +1250,7 @@ export class StoreAdminService {
               coldStorageId: outgoingOrder.coldStorageId,
               commodity: outgoingOrder.commodity,
               gatePassType: outgoingOrder.gatePassType,
+              date: outgoingOrder.date || outgoingOrder.createdAt,
               gatePassNumber: outgoingOrder.gatePassNumber,
               remarks: outgoingOrder.remarks,
               currentStockAtThatTime: outgoingOrder.currentStockAtThatTime,
@@ -1283,6 +1286,7 @@ export class StoreAdminService {
               coldStorageId: incomingOrder.coldStorageId,
               commodity: incomingOrder.commodity,
               gatePassType: incomingOrder.gatePassType,
+              date: incomingOrder.date || incomingOrder.createdAt,
               gatePassNumber: incomingOrder.gatePassNumber,
               remarks: incomingOrder.remarks,
               currentStockAtThatTime: incomingOrder.currentStockAtThatTime,
@@ -1324,6 +1328,7 @@ export class StoreAdminService {
                 coldStorageId: incomingOrder.coldStorageId,
                 commodity: incomingOrder.commodity,
                 gatePassType: incomingOrder.gatePassType,
+                date: incomingOrder.date || incomingOrder.createdAt,
                 gatePassNumber: incomingOrder.gatePassNumber,
                 remarks: incomingOrder.remarks,
                 currentStockAtThatTime: incomingOrder.currentStockAtThatTime,
@@ -1358,6 +1363,7 @@ export class StoreAdminService {
                 coldStorageId: outgoingOrder.coldStorageId,
                 commodity: outgoingOrder.commodity,
                 gatePassType: outgoingOrder.gatePassType,
+                date: outgoingOrder.date || outgoingOrder.createdAt,
                 gatePassNumber: outgoingOrder.gatePassNumber,
                 remarks: outgoingOrder.remarks,
                 currentStockAtThatTime: outgoingOrder.currentStockAtThatTime,
@@ -1771,6 +1777,7 @@ export class StoreAdminService {
           coldStorageId: order.coldStorageId,
           commodity: order.commodity,
           gatePassType: order.gatePassType,
+          date: order.date || order.createdAt,
           gatePassNumber: order.gatePassNumber,
           remarks: order.remarks,
           currentStockAtThatTime: order.currentStockAtThatTime,
@@ -1866,6 +1873,7 @@ export class StoreAdminService {
           coldStorageId: order.coldStorageId,
           commodity: order.commodity,
           gatePassType: order.gatePassType,
+          date: order.date || order.createdAt,
           gatePassNumber: order.gatePassNumber,
           remarks: order.remarks,
           currentStockAtThatTime: order.currentStockAtThatTime,
@@ -1996,6 +2004,7 @@ export class StoreAdminService {
               coldStorageId: outgoingOrder.coldStorageId,
               commodity: outgoingOrder.commodity,
               gatePassType: outgoingOrder.gatePassType,
+              date: outgoingOrder.date || outgoingOrder.createdAt,
               gatePassNumber: outgoingOrder.gatePassNumber,
               remarks: outgoingOrder.remarks,
               currentStockAtThatTime: outgoingOrder.currentStockAtThatTime,
@@ -2031,6 +2040,7 @@ export class StoreAdminService {
               coldStorageId: incomingOrder.coldStorageId,
               commodity: incomingOrder.commodity,
               gatePassType: incomingOrder.gatePassType,
+              date: incomingOrder.date || incomingOrder.createdAt,
               gatePassNumber: incomingOrder.gatePassNumber,
               remarks: incomingOrder.remarks,
               currentStockAtThatTime: incomingOrder.currentStockAtThatTime,
@@ -2070,6 +2080,7 @@ export class StoreAdminService {
                 coldStorageId: incomingOrder.coldStorageId,
                 commodity: incomingOrder.commodity,
                 gatePassType: incomingOrder.gatePassType,
+                date: incomingOrder.date || incomingOrder.createdAt,
                 gatePassNumber: incomingOrder.gatePassNumber,
                 remarks: incomingOrder.remarks,
                 currentStockAtThatTime: incomingOrder.currentStockAtThatTime,
@@ -2104,6 +2115,7 @@ export class StoreAdminService {
                 coldStorageId: outgoingOrder.coldStorageId,
                 commodity: outgoingOrder.commodity,
                 gatePassType: outgoingOrder.gatePassType,
+                date: outgoingOrder.date || outgoingOrder.createdAt,
                 gatePassNumber: outgoingOrder.gatePassNumber,
                 remarks: outgoingOrder.remarks,
                 currentStockAtThatTime: outgoingOrder.currentStockAtThatTime,
@@ -2154,5 +2166,488 @@ export class StoreAdminService {
           "Invalid type parameter. Use 'all', 'incoming', or 'outgoing'."
         );
     }
+  }
+
+  /**
+   * Get cold storage analytics overview
+   * Aggregates data from IncomingOrder and OutgoingOrder to provide comprehensive analytics
+   */
+  async getColdStorageAnalytics(options: {
+    coldStorageId: string;
+    dateFrom?: string;
+    dateTo?: string;
+    commodity?: Commodity;
+    farmerId?: string;
+    locationId?: string;
+  }): Promise<{
+    meta: {
+      coldStorageId: string;
+      generatedAt: string;
+      unit: string;
+    };
+    summary: {
+      totalBagsInitial: number;
+      totalBagsCurrent: number;
+      totalIncomingBags: number;
+      totalOutgoingBags: number;
+    };
+    commoditySummary: Array<{
+      commodity: string;
+      totalCurrent: number;
+      varieties: Array<{
+        varietyName: string;
+        totalCurrent: number;
+        bagSizes: Array<{
+          size: string;
+          totalInitial: number;
+          totalCurrent: number;
+          totalOutgoing: number;
+        }>;
+      }>;
+    }>;
+    stockTrend: Array<{
+      date: string;
+      incoming: number;
+      outgoing: number;
+      netChange: number;
+      totalStock: number;
+    }>;
+    locationAnalytics: Array<{
+      locationId: string;
+      floor: string;
+      row: string;
+      chamber: string;
+      totalCurrentBags: number;
+      breakdownByFarmer: Array<{
+        farmerId: string;
+        farmerName: string;
+        accountNumber: number;
+        totalCurrentBags: number;
+        details: Array<{
+          commodity: string;
+          variety: string;
+          size: string;
+          storedOn: string;
+          initialQuantity: number;
+          currentQuantity: number;
+        }>;
+      }>;
+    }>;
+  }> {
+    const { coldStorageId, dateFrom, dateTo, commodity, farmerId, locationId } = options;
+
+    // Build date filter - match orders where date (if set) or createdAt (if date is null) falls within range
+    const buildDateFilter = () => {
+      if (!dateFrom && !dateTo) return undefined;
+
+      const dateFilter: Prisma.DateTimeFilter = {
+        ...(dateFrom && { gte: new Date(dateFrom) }),
+        ...(dateTo && { lte: new Date(dateTo) }),
+      };
+
+      return [
+        // Orders with date field set - check date field
+        { date: { ...dateFilter, not: null } },
+        // Orders with date field null - check createdAt
+        { date: null, createdAt: dateFilter },
+      ] as const;
+    };
+
+    const dateOrFilter = buildDateFilter();
+
+    // Build where clause for incoming orders
+    const incomingWhere: Prisma.IncomingOrderWhereInput = {
+      coldStorageId,
+      ...(commodity && { commodity }),
+      ...(farmerId && { farmerStorageLinkId: farmerId }),
+      ...(dateOrFilter && { OR: [...dateOrFilter] as Prisma.IncomingOrderWhereInput['OR'] }),
+    };
+
+    // Build where clause for outgoing orders
+    const outgoingWhere: Prisma.OutgoingOrderWhereInput = {
+      coldStorageId,
+      ...(commodity && { commodity }),
+      ...(farmerId && { farmerStorageLinkId: farmerId }),
+      ...(dateOrFilter && { OR: [...dateOrFilter] as Prisma.OutgoingOrderWhereInput['OR'] }),
+    };
+
+    // Fetch all incoming orders with required fields
+    const incomingOrders = await this.fastify.prisma.incomingOrder.findMany({
+      where: incomingWhere,
+      select: {
+        id: true,
+        date: true,
+        createdAt: true,
+        commodity: true,
+        farmerStorageLinkId: true,
+        varieties: true,
+        farmerStorageLink: {
+          select: {
+            id: true,
+            farmer: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            accountNumber: true,
+          },
+        },
+      },
+    });
+
+    // Fetch all outgoing orders with required fields
+    const outgoingOrders = await this.fastify.prisma.outgoingOrder.findMany({
+      where: outgoingWhere,
+      select: {
+        id: true,
+        date: true,
+        createdAt: true,
+        commodity: true,
+        farmerStorageLinkId: true,
+        varieties: true,
+        farmerStorageLink: {
+          select: {
+            id: true,
+            farmer: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            accountNumber: true,
+          },
+        },
+      },
+    });
+
+    // Fetch all locations for this cold storage
+    const locations = await this.fastify.prisma.location.findMany({
+      where: {
+        coldStorageId,
+        ...(locationId && { id: locationId }),
+      },
+    });
+
+    const locationMap = new Map(locations.map((loc) => [loc.id, loc]));
+
+    // Helper: Get effective date (date ?? createdAt)
+    const getEffectiveDate = (order: { date: Date | null; createdAt: Date }): Date => {
+      return order.date ?? order.createdAt;
+    };
+
+    // 1. Calculate Summary (all commodities combined)
+    let totalBagsInitial = 0;
+    let totalBagsCurrent = 0;
+    let totalIncomingBags = 0;
+    let totalOutgoingBags = 0;
+
+    // Process incoming orders for summary
+    for (const order of incomingOrders) {
+      for (const variety of order.varieties || []) {
+        for (const bagSize of variety.bagSizes || []) {
+          if (locationId && bagSize.locationId !== locationId) continue;
+          totalBagsInitial += bagSize.quantityInit;
+          totalBagsCurrent += bagSize.quantityCurr;
+          totalIncomingBags += bagSize.quantityInit;
+        }
+      }
+    }
+
+    // Process outgoing orders for summary
+    for (const order of outgoingOrders) {
+      for (const variety of order.varieties || []) {
+        for (const bagSize of variety.bagSizes || []) {
+          if (locationId && bagSize.locationId !== locationId) continue;
+          totalOutgoingBags += bagSize.quantityRemoved;
+        }
+      }
+    }
+
+    // 2. Calculate Commodity Summary
+    const commodityMap = new Map<
+      string,
+      {
+        commodity: string;
+        varieties: Map<
+          string,
+          {
+            varietyName: string;
+            bagSizes: Map<
+              string,
+              {
+                totalInitial: number;
+                totalCurrent: number;
+              }
+            >;
+          }
+        >;
+      }
+    >();
+
+    // Process incoming orders for commodity summary
+    for (const order of incomingOrders) {
+      if (!commodityMap.has(order.commodity)) {
+        commodityMap.set(order.commodity, {
+          commodity: order.commodity,
+          varieties: new Map(),
+        });
+      }
+      const commodityData = commodityMap.get(order.commodity);
+      if (!commodityData) continue;
+
+      for (const variety of order.varieties || []) {
+        if (!commodityData.varieties.has(variety.name)) {
+          commodityData.varieties.set(variety.name, {
+            varietyName: variety.name,
+            bagSizes: new Map(),
+          });
+        }
+        const varietyData = commodityData.varieties.get(variety.name);
+        if (!varietyData) continue;
+
+        for (const bagSize of variety.bagSizes || []) {
+          if (locationId && bagSize.locationId !== locationId) continue;
+          const existing = varietyData.bagSizes.get(bagSize.name) || {
+            totalInitial: 0,
+            totalCurrent: 0,
+          };
+          varietyData.bagSizes.set(bagSize.name, {
+            totalInitial: existing.totalInitial + bagSize.quantityInit,
+            totalCurrent: existing.totalCurrent + bagSize.quantityCurr,
+          });
+        }
+      }
+    }
+
+    // Note: quantityCurr in IncomingOrder already reflects current stock after outgoing orders
+    // So we don't need to process outgoing orders for commodity summary
+
+    // Convert commodity map to array format
+    const commoditySummary = Array.from(commodityMap.values()).map((commodityData) => {
+      let totalCurrent = 0;
+      const varieties = Array.from(commodityData.varieties.values()).map((varietyData) => {
+        const bagSizes = Array.from(varietyData.bagSizes.entries()).map(
+          ([size, { totalInitial, totalCurrent: bagSizeTotalCurrent }]) => ({
+            size,
+            totalInitial,
+            totalCurrent: bagSizeTotalCurrent,
+            totalOutgoing: totalInitial - bagSizeTotalCurrent,
+          })
+        );
+        const varietyTotal = bagSizes.reduce((sum, bs) => sum + bs.totalCurrent, 0);
+        totalCurrent += varietyTotal;
+        return {
+          varietyName: varietyData.varietyName,
+          totalCurrent: varietyTotal,
+          bagSizes,
+        };
+      });
+      return {
+        commodity: commodityData.commodity,
+        totalCurrent,
+        varieties,
+      };
+    });
+
+    // 3. Calculate Stock Trend (time-series data)
+    interface TrendPoint {
+      date: Date;
+      incoming: number;
+      outgoing: number;
+    }
+
+    const trendMap = new Map<string, TrendPoint>();
+
+    // Process incoming orders for trend
+    for (const order of incomingOrders) {
+      const effectiveDate = getEffectiveDate(order);
+      const dateKey = effectiveDate.toISOString().split('T')[0]; // YYYY-MM-DD
+
+      if (!trendMap.has(dateKey)) {
+        trendMap.set(dateKey, {
+          date: new Date(effectiveDate.setHours(0, 0, 0, 0)),
+          incoming: 0,
+          outgoing: 0,
+        });
+      }
+
+      const point = trendMap.get(dateKey);
+      if (!point) continue;
+      for (const variety of order.varieties || []) {
+        for (const bagSize of variety.bagSizes || []) {
+          if (locationId && bagSize.locationId !== locationId) continue;
+          point.incoming += bagSize.quantityInit;
+        }
+      }
+    }
+
+    // Process outgoing orders for trend
+    for (const order of outgoingOrders) {
+      const effectiveDate = getEffectiveDate(order);
+      const dateKey = effectiveDate.toISOString().split('T')[0]; // YYYY-MM-DD
+
+      if (!trendMap.has(dateKey)) {
+        trendMap.set(dateKey, {
+          date: new Date(effectiveDate.setHours(0, 0, 0, 0)),
+          incoming: 0,
+          outgoing: 0,
+        });
+      }
+
+      const point = trendMap.get(dateKey);
+      if (!point) continue;
+      for (const variety of order.varieties || []) {
+        for (const bagSize of variety.bagSizes || []) {
+          if (locationId && bagSize.locationId !== locationId) continue;
+          point.outgoing += bagSize.quantityRemoved;
+        }
+      }
+    }
+
+    // Convert trend map to sorted array with running total
+    const sortedTrendPoints = Array.from(trendMap.values()).sort(
+      (a, b) => a.date.getTime() - b.date.getTime()
+    );
+
+    let runningTotal = 0;
+    const stockTrend = sortedTrendPoints.map((point) => {
+      const netChange = point.incoming - point.outgoing;
+      runningTotal += netChange;
+      return {
+        date: point.date.toISOString(),
+        incoming: point.incoming,
+        outgoing: point.outgoing,
+        netChange,
+        totalStock: runningTotal,
+      };
+    });
+
+    // 4. Calculate Location Analytics
+    const locationAnalyticsMap = new Map<
+      string,
+      {
+        locationId: string;
+        floor: string;
+        row: string;
+        chamber: string;
+        farmers: Map<
+          string,
+          {
+            farmerId: string;
+            farmerName: string;
+            accountNumber: number;
+            details: Array<{
+              commodity: string;
+              variety: string;
+              size: string;
+              storedOn: string;
+              initialQuantity: number;
+              currentQuantity: number;
+            }>;
+          }
+        >;
+      }
+    >();
+
+    // Process incoming orders for location analytics
+    for (const order of incomingOrders) {
+      const effectiveDate = getEffectiveDate(order);
+      const farmerLink = order.farmerStorageLink;
+
+      for (const variety of order.varieties || []) {
+        for (const bagSize of variety.bagSizes || []) {
+          if (locationId && bagSize.locationId !== locationId) continue;
+
+          const location = locationMap.get(bagSize.locationId);
+          if (!location) continue;
+
+          if (!locationAnalyticsMap.has(bagSize.locationId)) {
+            locationAnalyticsMap.set(bagSize.locationId, {
+              locationId: bagSize.locationId,
+              floor: location.floor,
+              row: location.row,
+              chamber: location.chamber,
+              farmers: new Map(),
+            });
+          }
+
+          const locationData = locationAnalyticsMap.get(bagSize.locationId);
+          if (!locationData) continue;
+          const farmerKey = order.farmerStorageLinkId;
+
+          if (!locationData.farmers.has(farmerKey)) {
+            locationData.farmers.set(farmerKey, {
+              farmerId: farmerLink?.id || order.farmerStorageLinkId,
+              farmerName: farmerLink?.farmer?.name || 'Unknown',
+              accountNumber: farmerLink?.accountNumber || 0,
+              details: [],
+            });
+          }
+
+          const farmerData = locationData.farmers.get(farmerKey);
+          if (!farmerData) continue;
+          farmerData.details.push({
+            commodity: order.commodity,
+            variety: variety.name,
+            size: bagSize.name,
+            storedOn: effectiveDate.toISOString(),
+            initialQuantity: bagSize.quantityInit,
+            currentQuantity: bagSize.quantityCurr,
+          });
+        }
+      }
+    }
+
+    // Note: quantityCurr in IncomingOrder already reflects current stock after outgoing orders
+    // So we don't need to process outgoing orders to update currentQuantity in location analytics
+
+    // Convert location analytics map to array format
+    const locationAnalytics = Array.from(locationAnalyticsMap.values()).map((locationData) => {
+      const breakdownByFarmer = Array.from(locationData.farmers.values()).map((farmerData) => {
+        const totalCurrentBags = farmerData.details.reduce(
+          (sum, detail) => sum + detail.currentQuantity,
+          0
+        );
+        return {
+          farmerId: farmerData.farmerId,
+          farmerName: farmerData.farmerName,
+          accountNumber: farmerData.accountNumber,
+          totalCurrentBags,
+          details: farmerData.details,
+        };
+      });
+
+      const totalCurrentBags = breakdownByFarmer.reduce(
+        (sum, farmer) => sum + farmer.totalCurrentBags,
+        0
+      );
+
+      return {
+        locationId: locationData.locationId,
+        floor: locationData.floor,
+        row: locationData.row,
+        chamber: locationData.chamber,
+        totalCurrentBags,
+        breakdownByFarmer,
+      };
+    });
+
+    return {
+      meta: {
+        coldStorageId,
+        generatedAt: new Date().toISOString(),
+        unit: 'bags',
+      },
+      summary: {
+        totalBagsInitial,
+        totalBagsCurrent,
+        totalIncomingBags,
+        totalOutgoingBags,
+      },
+      commoditySummary,
+      stockTrend,
+      locationAnalytics,
+    };
   }
 }

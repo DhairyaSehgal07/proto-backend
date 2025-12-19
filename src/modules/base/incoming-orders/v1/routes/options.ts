@@ -24,6 +24,7 @@ export const createOptions = {
                   farmerStorageLinkId: { type: 'string' },
                   coldStorageId: { type: ['string', 'null'] },
                   commodity: { type: 'string' },
+                  date: { type: ['string', 'null'], format: 'date-time' },
                   gatePassType: { type: 'string' },
                   gatePassNumber: { type: 'number' },
                   remarks: { type: ['string', 'null'] },
@@ -95,10 +96,23 @@ export const createOptions = {
             properties: {
               code: { type: 'string' },
               message: { type: 'string' },
+              details: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    path: { type: 'string' },
+                    message: { type: 'string' },
+                  },
+                  required: ['path', 'message'],
+                },
+              },
             },
+            required: ['code', 'message'],
           },
         },
       },
+
       401: {
         type: 'object',
         properties: {
@@ -153,6 +167,7 @@ export const listOptions = {
                 commodity: { type: 'string' },
                 gatePassType: { type: 'string', enum: ['RECEIPT', 'ISSUE'] },
                 gatePassNumber: { type: 'number' },
+                date: { type: ['string', 'null'], format: 'date-time' },
                 remarks: { type: 'string' },
                 currentStockAtThatTime: { type: 'number' },
                 varieties: {
@@ -267,6 +282,7 @@ export const getByFarmerOptions = {
                 commodity: { type: 'string' },
                 gatePassType: { type: 'string' },
                 gatePassNumber: { type: 'number' },
+                date: { type: ['string', 'null'], format: 'date-time' },
                 remarks: { type: ['string', 'null'] },
                 currentStockAtThatTime: { type: ['number', 'null'] },
                 varieties: {
@@ -360,6 +376,7 @@ export const getByIdOptions = {
               commodity: { type: 'string' },
               gatePassType: { type: 'string' },
               gatePassNumber: { type: 'number' },
+              date: { type: ['string', 'null'], format: 'date-time' },
               remarks: { type: ['string', 'null'] },
               currentStockAtThatTime: { type: ['number', 'null'] },
 
@@ -478,6 +495,7 @@ export const updateOptions = {
                   commodity: { type: 'string' },
                   gatePassType: { type: 'string' },
                   gatePassNumber: { type: 'number' },
+                  date: { type: ['string', 'null'], format: 'date-time' },
                   remarks: { type: ['string', 'null'] },
                   currentStockAtThatTime: { type: ['number', 'null'] },
                   varieties: {
@@ -547,7 +565,19 @@ export const updateOptions = {
             properties: {
               code: { type: 'string' },
               message: { type: 'string' },
+              details: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    path: { type: 'string' },
+                    message: { type: 'string' },
+                  },
+                  required: ['path', 'message'],
+                },
+              },
             },
+            required: ['code', 'message'],
           },
         },
       },

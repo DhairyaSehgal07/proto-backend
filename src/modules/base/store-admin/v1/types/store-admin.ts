@@ -166,6 +166,7 @@ export interface DaybookOrderItem {
   coldStorageId: string | null;
   commodity: string;
   gatePassType: string;
+  date: Date;
   gatePassNumber: number;
   remarks: string | null;
   currentStockAtThatTime: number | null;

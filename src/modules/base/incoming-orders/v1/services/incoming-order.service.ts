@@ -221,6 +221,7 @@ export class IncomingOrderService {
         commodity: data.commodity,
         gatePassType: data.gatePassType || 'RECEIPT',
         gatePassNumber: data.gatePassNumber,
+        date: data.date || null,
         remarks: data.remarks || null,
         currentStockAtThatTime: finalCurrentStock,
         varieties: processedVarieties || [], // empty array for null vouchers
@@ -688,6 +689,7 @@ export class IncomingOrderService {
         ...(data.commodity !== undefined && { commodity: data.commodity }),
         ...(data.gatePassNumber !== undefined && { gatePassNumber: data.gatePassNumber }),
         ...(data.gatePassType !== undefined && { gatePassType: data.gatePassType }),
+        ...(data.date !== undefined && { date: data.date || null }),
         ...(data.remarks !== undefined && { remarks: data.remarks || null }),
         ...(finalCurrentStock !== undefined && { currentStockAtThatTime: finalCurrentStock }),
         ...(data.varieties !== undefined && { varieties: processedVarieties }), // Can be empty array for null vouchers
@@ -862,6 +864,7 @@ export class IncomingOrderService {
       commodity: order.commodity,
       gatePassType: order.gatePassType,
       gatePassNumber: order.gatePassNumber,
+      date: order.date,
       remarks: order.remarks,
       currentStockAtThatTime: order.currentStockAtThatTime,
       varieties: order.varieties as ProcessedVariety[],
