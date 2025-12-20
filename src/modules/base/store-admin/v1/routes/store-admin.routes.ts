@@ -16,6 +16,7 @@ import {
   FarmerOrdersQuery,
   FarmerStorageLinkIdParam,
   ColdStorageAnalyticsQuery,
+  VarietyInventoryAnalysisQuery,
 } from '../schemas/store-admin.schema.js';
 import { authenticateAdmin } from '@/core/middleware/auth.middleware.js';
 import { requirePermission } from '@/core/middleware/permission.middleware.js';
@@ -34,6 +35,7 @@ import {
   getGatePassNumberOptions,
   getFarmerOrdersOptions,
   coldStorageAnalyticsOptions,
+  varietyInventoryAnalysisOptions,
 } from './options.js';
 import {
   createBodyValidator,
@@ -46,6 +48,7 @@ import {
   validateFarmerOrdersQuery,
   validateFarmerStorageLinkIdParam,
   validateColdStorageAnalyticsQuery,
+  validateVarietyInventoryAnalysisQuery,
 } from './validators.js';
 
 /**
@@ -98,6 +101,10 @@ interface GetFarmerByIdRequestParams {
 
 interface ColdStorageAnalyticsRequestParams {
   Querystring: ColdStorageAnalyticsQuery;
+}
+
+interface VarietyInventoryAnalysisRequestParams {
+  Querystring: VarietyInventoryAnalysisQuery;
 }
 
 /**
@@ -332,6 +339,24 @@ function storeAdminRoutes(fastify: FastifyInstance, _options: FastifyPluginOptio
     async (request: FastifyRequest, reply: FastifyReply) => {
       await controller.getColdStorageAnalytics(
         request as FastifyRequest<ColdStorageAnalyticsRequestParams>,
+        reply
+      );
+    }
+  );
+
+  /**
+   * GET /api/v1/store-admin/inventory/variety-analysis
+   * Get variety-wise inventory analysis for a given storage
+   */
+  fastify.get(
+    '/inventory/variety-analysis',
+    {
+      ...varietyInventoryAnalysisOptions,
+      preHandler: [authenticateAdmin, validateVarietyInventoryAnalysisQuery],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      await controller.getVarietyInventoryAnalysis(
+        request as FastifyRequest<VarietyInventoryAnalysisRequestParams>,
         reply
       );
     }

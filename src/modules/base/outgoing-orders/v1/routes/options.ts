@@ -26,6 +26,7 @@ export const createOptions = {
                   commodity: { type: 'string' },
                   gatePassType: { type: 'string' },
                   gatePassNumber: { type: 'number' },
+                  date: { type: ['string', 'null'], format: 'date-time' },
                   remarks: { type: ['string', 'null'] },
                   currentStockAtThatTime: { type: ['number', 'null'] },
                   varieties: {
@@ -157,6 +158,7 @@ export const updateOptions = {
                   commodity: { type: 'string' },
                   gatePassType: { type: 'string' },
                   gatePassNumber: { type: 'number' },
+                  date: { type: ['string', 'null'], format: 'date-time' },
                   remarks: { type: ['string', 'null'] },
                   currentStockAtThatTime: { type: ['number', 'null'] },
                   varieties: {
@@ -299,6 +301,7 @@ export const listOptions = {
                 commodity: { type: 'string' },
                 gatePassType: { type: 'string' },
                 gatePassNumber: { type: 'number' },
+                date: { type: ['string', 'null'], format: 'date-time' },
                 remarks: { type: ['string', 'null'] },
                 currentStockAtThatTime: { type: ['number', 'null'] },
                 varieties: {
@@ -410,6 +413,7 @@ export const getByFarmerOptions = {
                 commodity: { type: 'string' },
                 gatePassType: { type: 'string' },
                 gatePassNumber: { type: 'number' },
+                date: { type: ['string', 'null'], format: 'date-time' },
                 remarks: { type: ['string', 'null'] },
                 currentStockAtThatTime: { type: ['number', 'null'] },
                 varieties: {

@@ -1026,6 +1026,160 @@ export const getFarmerOrdersOptions = {
 } as RouteShorthandOptions;
 
 /**
+ * Route options for GET /api/v1/store-admin/inventory/variety-analysis
+ * Get variety-wise inventory analysis for a given storage
+ */
+export const varietyInventoryAnalysisOptions = {
+  schema: {
+    description:
+      'Get variety-wise inventory analysis for a given storage. Returns farmers with their available quantities grouped by bag size, and location-wise aggregation of quantities.',
+    tags: ['store-admin'],
+    querystring: {
+      type: 'object',
+      properties: {
+        storageId: {
+          type: 'string',
+          description: 'Cold storage ID (required)',
+        },
+        commodity: {
+          type: 'string',
+          enum: ['POTATO', 'ONION', 'GARLIC', 'TOMATO', 'CARROT', 'APPLE', 'SWEETS', 'OTHER'],
+          description: 'Commodity type (required)',
+        },
+        variety: {
+          type: 'string',
+          description: 'Variety name (required)',
+        },
+      },
+      required: ['storageId', 'commodity', 'variety'],
+    },
+    response: {
+      200: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          data: {
+            type: 'object',
+            properties: {
+              commodity: { type: 'string' },
+              variety: { type: 'string' },
+              farmers: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    farmerId: { type: 'string' },
+                    farmerName: { type: 'string' },
+                    sizes: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          size: { type: 'string' },
+                          totalInitial: { type: 'number' },
+                          totalCurrent: { type: 'number' },
+                          totalOutgoing: { type: 'number' },
+                        },
+                        required: ['size', 'totalInitial', 'totalCurrent', 'totalOutgoing'],
+                      },
+                    },
+                    totalInitial: { type: 'number' },
+                    totalCurrent: { type: 'number' },
+                    totalOutgoing: { type: 'number' },
+                  },
+                  required: [
+                    'farmerId',
+                    'farmerName',
+                    'sizes',
+                    'totalInitial',
+                    'totalCurrent',
+                    'totalOutgoing',
+                  ],
+                },
+              },
+              locations: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    location: {
+                      type: 'object',
+                      properties: {
+                        chamber: { type: 'string' },
+                        floor: { type: 'string' },
+                        row: { type: 'string' },
+                      },
+                      required: ['chamber', 'floor', 'row'],
+                    },
+                    totalInitial: { type: 'number' },
+                    totalCurrent: { type: 'number' },
+                    totalOutgoing: { type: 'number' },
+                    sizes: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          size: { type: 'string' },
+                          totalInitial: { type: 'number' },
+                          totalCurrent: { type: 'number' },
+                          totalOutgoing: { type: 'number' },
+                        },
+                        required: ['size', 'totalInitial', 'totalCurrent', 'totalOutgoing'],
+                      },
+                    },
+                  },
+                  required: ['location', 'totalInitial', 'totalCurrent', 'totalOutgoing', 'sizes'],
+                },
+              },
+            },
+            required: ['commodity', 'variety', 'farmers', 'locations'],
+          },
+        },
+      },
+      400: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          error: {
+            type: 'object',
+            properties: {
+              code: { type: 'string' },
+              message: { type: 'string' },
+            },
+          },
+        },
+      },
+      401: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          error: {
+            type: 'object',
+            properties: {
+              code: { type: 'string' },
+              message: { type: 'string' },
+            },
+          },
+        },
+      },
+      403: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          error: {
+            type: 'object',
+            properties: {
+              code: { type: 'string' },
+              message: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+  },
+} as RouteShorthandOptions;
+
+/**
  * Route options for GET /api/v1/store-admin/analytics/overview
  * Get cold storage analytics overview
  */

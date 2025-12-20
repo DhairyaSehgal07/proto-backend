@@ -285,3 +285,40 @@ export interface FarmerDetailResponse {
     name: string;
   } | null;
 }
+
+/**
+ * Variety inventory analysis response type
+ */
+export interface VarietyInventoryAnalysisResponse {
+  commodity: string;
+  variety: string;
+  farmers: Array<{
+    farmerId: string;
+    farmerName: string;
+    sizes: Array<{
+      size: string;
+      totalInitial: number;
+      totalCurrent: number;
+      totalOutgoing: number;
+    }>;
+    totalInitial: number;
+    totalCurrent: number;
+    totalOutgoing: number;
+  }>;
+  locations: Array<{
+    location: {
+      chamber: string;
+      floor: string;
+      row: string;
+    };
+    totalInitial: number;
+    totalCurrent: number;
+    totalOutgoing: number;
+    sizes: Array<{
+      size: string;
+      totalInitial: number;
+      totalCurrent: number;
+      totalOutgoing: number;
+    }>;
+  }>;
+}

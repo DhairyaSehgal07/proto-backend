@@ -50,7 +50,8 @@ export const createOutgoingOrderSchema = z.object({
   commodity: commodityEnum,
   gatePassNumber: z.coerce.number().int().positive('Gate pass number must be a positive integer'),
   gatePassType: gatePassTypeEnum.optional().default(GatePassType.DELIVERY),
-  remarks: z.string().optional(),
+  date: z.coerce.date().optional(),
+  remarks: z.string().optional().nullable(),
   currentStockAtThatTime: z.coerce.number().min(0, 'Current stock must be non-negative').optional(),
   varieties: z.array(varietySnapshotSchema).optional(),
 });
@@ -67,6 +68,7 @@ export const updateOutgoingOrderSchema = z.object({
     .positive('Gate pass number must be a positive integer')
     .optional(),
   gatePassType: gatePassTypeEnum.optional(),
+  date: z.coerce.date().optional(),
   remarks: z.string().optional(),
   currentStockAtThatTime: z.coerce.number().min(0, 'Current stock must be non-negative').optional(),
   varieties: z.array(varietySnapshotSchema).optional(),

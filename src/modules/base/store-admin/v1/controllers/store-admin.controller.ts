@@ -24,6 +24,7 @@ import type {
   FarmerOrdersQuery,
   FarmerStorageLinkIdParam,
   ColdStorageAnalyticsQuery,
+  VarietyInventoryAnalysisQuery,
 } from '../schemas/store-admin.schema.js';
 
 // Route-level types
@@ -74,6 +75,10 @@ interface GetFarmerByIdRequestParams {
 
 interface ColdStorageAnalyticsRequestParams {
   Querystring: ColdStorageAnalyticsQuery;
+}
+
+interface VarietyInventoryAnalysisRequestParams {
+  Querystring: VarietyInventoryAnalysisQuery;
 }
 
 /**
@@ -631,6 +636,65 @@ export class StoreAdminController {
         farmerId,
         locationId,
       });
+
+      reply.code(200).send({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      this.handleError(error, reply);
+    }
+  }
+
+  /**
+   * GET /store-admin/inventory/variety-analysis - Get variety-wise inventory analysis
+   */
+  async getVarietyInventoryAnalysis(
+    request: FastifyRequest<VarietyInventoryAnalysisRequestParams>,
+    reply: FastifyReply
+  ): Promise<void> {
+    try {
+      if (!request.admin) {
+        reply.code(401).send({
+          success: false,
+          error: {
+            code: 'AUTHENTICATION_REQUIRED',
+            message: 'Authentication required',
+          },
+        });
+        return;
+      }
+
+      if (!request.admin.coldStorageId) {
+        reply.code(400).send({
+          success: false,
+          error: {
+            code: 'MISSING_COLD_STORAGE',
+            message: 'Missing cold storage context',
+          },
+        });
+        return;
+      }
+
+      const { storageId, commodity, variety } = request.query;
+
+      // Verify storageId matches the authenticated admin's cold storage
+      if (storageId !== request.admin.coldStorageId) {
+        reply.code(403).send({
+          success: false,
+          error: {
+            code: 'FORBIDDEN',
+            message: 'Access denied to this cold storage',
+          },
+        });
+        return;
+      }
+
+      const result = await this.service.getVarietyInventoryAnalysis(
+        storageId,
+        commodity as any,
+        variety
+      );
 
       reply.code(200).send({
         success: true,

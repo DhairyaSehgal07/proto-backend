@@ -161,6 +161,20 @@ export const coldStorageAnalyticsQuerySchema = z.object({
 });
 
 /**
+ * VARIETY INVENTORY ANALYSIS QUERY schema — for variety-wise inventory analysis
+ */
+export const varietyInventoryAnalysisQuerySchema = z.object({
+  storageId: z
+    .string()
+    .length(24, 'Invalid MongoDB ObjectId')
+    .describe('Cold storage ID (required)'),
+  commodity: z
+    .enum(['POTATO', 'ONION', 'GARLIC', 'TOMATO', 'CARROT', 'APPLE', 'SWEETS', 'OTHER'])
+    .describe('Commodity type (required)'),
+  variety: z.string().min(1, 'Variety name is required').describe('Variety name (required)'),
+});
+
+/**
  * Type Inference (for controller/service layers)
  */
 export type CreateStoreAdminInput = z.infer<typeof createStoreAdminSchema>;
@@ -174,3 +188,4 @@ export type GatePassNumberQuery = z.infer<typeof gatePassNumberQuerySchema>;
 export type FarmerOrdersQuery = z.infer<typeof farmerOrdersQuerySchema>;
 export type FarmerStorageLinkIdParam = z.infer<typeof farmerStorageLinkIdParamSchema>;
 export type ColdStorageAnalyticsQuery = z.infer<typeof coldStorageAnalyticsQuerySchema>;
+export type VarietyInventoryAnalysisQuery = z.infer<typeof varietyInventoryAnalysisQuerySchema>;

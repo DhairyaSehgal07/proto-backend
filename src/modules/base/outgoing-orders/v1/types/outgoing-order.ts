@@ -33,6 +33,7 @@ export interface CreateOutgoingOrderRequest {
   commodity: Commodity;
   gatePassNumber: number;
   gatePassType?: GatePassType;
+  date?: Date;
   remarks?: string;
   currentStockAtThatTime?: number;
   varieties?: VarietySnapshotInput[];
@@ -46,6 +47,7 @@ export interface UpdateOutgoingOrderRequest {
   commodity?: Commodity;
   gatePassNumber?: number;
   gatePassType?: GatePassType;
+  date?: Date;
   remarks?: string;
   currentStockAtThatTime?: number;
   varieties?: VarietySnapshotInput[];
@@ -61,6 +63,7 @@ export interface OutgoingOrderResponse {
   commodity: Commodity;
   gatePassType: GatePassType;
   gatePassNumber: number;
+  date: Date | null;
   remarks: string | null;
   currentStockAtThatTime: number | null;
   varieties: VarietySnapshotInput[];

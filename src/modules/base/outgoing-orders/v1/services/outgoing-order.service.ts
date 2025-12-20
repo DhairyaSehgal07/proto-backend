@@ -478,6 +478,7 @@ export class OutgoingOrderService {
         commodity: data.commodity,
         gatePassType: data.gatePassType || 'DELIVERY',
         gatePassNumber: data.gatePassNumber,
+        date: data.date || null,
         remarks: data.remarks || null,
         currentStockAtThatTime: finalCurrentStock,
         varieties: processedVarieties || [], // empty array for null vouchers
@@ -1062,6 +1063,7 @@ export class OutgoingOrderService {
         ...(data.commodity !== undefined && { commodity: data.commodity }),
         ...(data.gatePassNumber !== undefined && { gatePassNumber: data.gatePassNumber }),
         ...(data.gatePassType !== undefined && { gatePassType: data.gatePassType }),
+        ...(data.date !== undefined && { date: data.date || null }),
         ...(data.remarks !== undefined && { remarks: data.remarks || null }),
         ...(finalCurrentStock !== undefined && { currentStockAtThatTime: finalCurrentStock }),
         ...(data.varieties !== undefined && { varieties: processedVarieties }),
@@ -1305,6 +1307,7 @@ export class OutgoingOrderService {
     commodity: Commodity;
     gatePassType: string;
     gatePassNumber: number;
+    date: Date | null;
     remarks: string | null;
     currentStockAtThatTime: number | null;
     varieties: Array<{
@@ -1389,6 +1392,7 @@ export class OutgoingOrderService {
     commodity: Commodity;
     gatePassType: string;
     gatePassNumber: number;
+    date: Date | null;
     remarks: string | null;
     currentStockAtThatTime: number | null;
     varieties: Array<{
@@ -1451,6 +1455,7 @@ export class OutgoingOrderService {
       commodity: order.commodity,
       gatePassType: order.gatePassType as OutgoingOrderResponse['gatePassType'],
       gatePassNumber: order.gatePassNumber,
+      date: order.date,
       remarks: order.remarks,
       currentStockAtThatTime: order.currentStockAtThatTime,
       varieties: processedVarieties,

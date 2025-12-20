@@ -19,6 +19,7 @@ import type {
   GatePassNumberResponse,
   FarmerOrdersResponse,
   FarmerDetailResponse,
+  VarietyInventoryAnalysisResponse,
 } from '../types/store-admin.js';
 import {
   Prisma,
@@ -2648,6 +2649,255 @@ export class StoreAdminService {
       commoditySummary,
       stockTrend,
       locationAnalytics,
+    };
+  }
+
+  /**
+   * Get variety-wise inventory analysis for a given storage
+   * Returns farmers with their available quantities grouped by bag size,
+   * and location-wise aggregation of quantities
+   */
+  async getVarietyInventoryAnalysis(
+    storageId: string,
+    commodity: Commodity,
+    variety: string
+  ): Promise<VarietyInventoryAnalysisResponse> {
+    // Step 1: Fetch all farmers linked to the storage
+    const farmerLinks = await this.fastify.prisma.farmerStorageLink.findMany({
+      where: {
+        coldStorageId: storageId,
+        isActive: true,
+      },
+      include: {
+        farmer: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (farmerLinks.length === 0) {
+      return {
+        commodity,
+        variety,
+        farmers: [],
+        locations: [],
+      };
+    }
+
+    const farmerLinkIds = farmerLinks.map((link) => link.id);
+
+    // Step 2: Fetch all incoming orders for these farmers with the given commodity
+    // Note: We filter by variety in JavaScript since Prisma doesn't support MongoDB array queries directly
+    const incomingOrders = await this.fastify.prisma.incomingOrder.findMany({
+      where: {
+        farmerStorageLinkId: { in: farmerLinkIds },
+        coldStorageId: storageId,
+        commodity,
+      },
+      select: {
+        id: true,
+        farmerStorageLinkId: true,
+        varieties: true,
+      },
+    });
+
+    // Step 3: Filter and process orders to extract relevant data
+    // Create a map to aggregate by farmer
+    const farmerMap = new Map<
+      string,
+      {
+        farmerId: string;
+        farmerName: string;
+        sizes: Map<
+          string,
+          {
+            totalInitial: number;
+            totalCurrent: number;
+          }
+        >; // size -> { totalInitial, totalCurrent }
+      }
+    >();
+
+    // Create a map to aggregate by location
+    const locationMap = new Map<
+      string,
+      {
+        locationId: string;
+        sizes: Map<
+          string,
+          {
+            totalInitial: number;
+            totalCurrent: number;
+          }
+        >; // size -> { totalInitial, totalCurrent }
+      }
+    >();
+
+    // Collect all location IDs for batch fetch
+    const locationIds = new Set<string>();
+
+    // Process each incoming order - filter by variety in JavaScript
+    for (const order of incomingOrders) {
+      const farmerLink = farmerLinks.find((link) => link.id === order.farmerStorageLinkId);
+      if (!farmerLink) continue;
+
+      // Filter varieties to only include the specified variety
+      const orderVarieties = (
+        order.varieties as Array<{
+          name: string;
+          bagSizes: Array<{
+            name: string;
+            quantityInit: number;
+            quantityCurr: number;
+            locationId: string;
+          }>;
+        }>
+      ).filter((v) => v.name === variety);
+
+      // Skip if no matching variety found
+      if (orderVarieties.length === 0) continue;
+
+      const farmerKey = order.farmerStorageLinkId;
+
+      // Initialize farmer in map if not exists
+      if (!farmerMap.has(farmerKey)) {
+        farmerMap.set(farmerKey, {
+          farmerId: farmerLink.farmerId,
+          farmerName: farmerLink.farmer.name,
+          sizes: new Map(),
+        });
+      }
+
+      const farmerData = farmerMap.get(farmerKey)!;
+
+      // Process matching varieties
+      for (const orderVariety of orderVarieties) {
+        for (const bagSize of orderVariety.bagSizes || []) {
+          // Add to farmer aggregation
+          const existingFarmerData = farmerData.sizes.get(bagSize.name) || {
+            totalInitial: 0,
+            totalCurrent: 0,
+          };
+          farmerData.sizes.set(bagSize.name, {
+            totalInitial: existingFarmerData.totalInitial + bagSize.quantityInit,
+            totalCurrent: existingFarmerData.totalCurrent + bagSize.quantityCurr,
+          });
+
+          // Add to location aggregation
+          locationIds.add(bagSize.locationId);
+          if (!locationMap.has(bagSize.locationId)) {
+            locationMap.set(bagSize.locationId, {
+              locationId: bagSize.locationId,
+              sizes: new Map(),
+            });
+          }
+
+          const locationData = locationMap.get(bagSize.locationId)!;
+          const existingLocationData = locationData.sizes.get(bagSize.name) || {
+            totalInitial: 0,
+            totalCurrent: 0,
+          };
+          locationData.sizes.set(bagSize.name, {
+            totalInitial: existingLocationData.totalInitial + bagSize.quantityInit,
+            totalCurrent: existingLocationData.totalCurrent + bagSize.quantityCurr,
+          });
+        }
+      }
+    }
+
+    // Step 4: Fetch location details
+    const locations = await this.fastify.prisma.location.findMany({
+      where: {
+        id: { in: Array.from(locationIds) },
+        coldStorageId: storageId,
+      },
+      select: {
+        id: true,
+        floor: true,
+        row: true,
+        chamber: true,
+      },
+    });
+
+    const locationDetailsMap = new Map(locations.map((loc) => [loc.id, loc]));
+
+    // Step 5: Build response - farmers
+    const farmers = Array.from(farmerMap.values())
+      .map((farmerData) => {
+        const sizes = Array.from(farmerData.sizes.entries())
+          .map(([size, { totalInitial, totalCurrent }]) => ({
+            size,
+            totalInitial,
+            totalCurrent,
+            totalOutgoing: totalInitial - totalCurrent,
+          }))
+          .sort((a, b) => a.size.localeCompare(b.size));
+
+        const totalInitial = sizes.reduce((sum, s) => sum + s.totalInitial, 0);
+        const totalCurrent = sizes.reduce((sum, s) => sum + s.totalCurrent, 0);
+        const totalOutgoing = totalInitial - totalCurrent;
+
+        return {
+          farmerId: farmerData.farmerId,
+          farmerName: farmerData.farmerName,
+          sizes,
+          totalInitial,
+          totalCurrent,
+          totalOutgoing,
+        };
+      })
+      .filter((farmer) => farmer.totalCurrent > 0) // Only include farmers with current stock
+      .sort((a, b) => a.farmerName.localeCompare(b.farmerName));
+
+    // Step 6: Build response - locations
+    const locationsResponse = Array.from(locationMap.entries())
+      .map(([locationId, locationData]) => {
+        const locationDetails = locationDetailsMap.get(locationId);
+        if (!locationDetails) return null;
+
+        const sizes = Array.from(locationData.sizes.entries())
+          .map(([size, { totalInitial, totalCurrent }]) => ({
+            size,
+            totalInitial,
+            totalCurrent,
+            totalOutgoing: totalInitial - totalCurrent,
+          }))
+          .sort((a, b) => a.size.localeCompare(b.size));
+
+        const totalInitial = sizes.reduce((sum, s) => sum + s.totalInitial, 0);
+        const totalCurrent = sizes.reduce((sum, s) => sum + s.totalCurrent, 0);
+        const totalOutgoing = totalInitial - totalCurrent;
+
+        return {
+          location: {
+            chamber: locationDetails.chamber,
+            floor: locationDetails.floor,
+            row: locationDetails.row,
+          },
+          totalInitial,
+          totalCurrent,
+          totalOutgoing,
+          sizes,
+        };
+      })
+      .filter((loc): loc is NonNullable<typeof loc> => loc !== null && loc.totalCurrent > 0)
+      .sort((a, b) => {
+        // Sort by chamber, then floor, then row
+        const chamberCompare = a.location.chamber.localeCompare(b.location.chamber);
+        if (chamberCompare !== 0) return chamberCompare;
+        const floorCompare = a.location.floor.localeCompare(b.location.floor);
+        if (floorCompare !== 0) return floorCompare;
+        return a.location.row.localeCompare(b.location.row);
+      });
+
+    return {
+      commodity,
+      variety,
+      farmers,
+      locations: locationsResponse,
     };
   }
 }
