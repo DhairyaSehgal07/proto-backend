@@ -1,6 +1,6 @@
 {
   "name": "Coldop-backend",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Production backend for Coldop (Fastify + Prisma + TypeScript)",
   "main": "src/server.ts",
   "type": "module",

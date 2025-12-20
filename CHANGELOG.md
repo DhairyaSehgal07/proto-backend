@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.5.1](https://github.com/DhairyaSehgal07/proto-backend/compare/v0.5.0...v0.5.1) (2025-12-20)
+
+### ### Added
+
+- **auth:** update cookie settings for cross-site authentication ([508073e](https://github.com/DhairyaSehgal07/proto-backend/commit/508073e0b4e4e4190f8b31359b206d3eebe59172))
+
+### ### Changed
+
+- update incoming orders and store admin modules ([45721e3](https://github.com/DhairyaSehgal07/proto-backend/commit/45721e37f8c1d08a803b78857db1679c9e664585))
+- update store-admin and outgoing-orders modules ([c01ef76](https://github.com/DhairyaSehgal07/proto-backend/commit/c01ef76241227f09d3e44da4949f836b29a2c267))
+
 ## [0.5.0](https://github.com/DhairyaSehgal07/proto-backend/compare/v0.4.2...v0.5.0) (2025-12-01)
 
 ### ### Added
