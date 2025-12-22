@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.5.2](https://github.com/DhairyaSehgal07/proto-backend/compare/v0.5.1...v0.5.2) (2025-12-22)
+
+### ### Fixed
+
+- update z.record() to use Zod v4 syntax with key and value schemas ([a764924](https://github.com/DhairyaSehgal07/proto-backend/commit/a764924e071c47dca849dca13a9851ac40a2a45a))
+
 ### [0.5.1](https://github.com/DhairyaSehgal07/proto-backend/compare/v0.5.0...v0.5.1) (2025-12-20)
 
 ### ### Added
