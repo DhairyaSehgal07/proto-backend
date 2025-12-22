@@ -5,6 +5,7 @@ import { z } from 'zod';
  */
 export const commodityObjSchema = z.object({
   name: z.string().min(1, 'Commodity name is required'),
+  varieties: z.array(z.string()).default([]),
   sizes: z.array(z.string()).default([]),
 });
 
@@ -19,13 +20,13 @@ export const incomingPrefsSchema = z.object({
  * CREATE schema
  */
 export const createPreferencesSchema = z.object({
-  varieties: z.array(z.string()).default([]).optional(),
   commodities: z.array(commodityObjSchema).default([]).optional(),
   generation: z.string().nullable().optional(),
   rouging: z.string().nullable().optional(),
   tuberType: z.string().nullable().optional(),
   grader: z.string().nullable().optional(),
   incoming: incomingPrefsSchema.optional(),
+  customFields: z.record(z.string(), z.any()).nullable().optional(),
 });
 
 /**
