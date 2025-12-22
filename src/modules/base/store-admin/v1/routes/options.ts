@@ -98,16 +98,13 @@ export const loginOptions = {
                     nullable: true,
                     properties: {
                       id: { type: 'string' },
-                      varieties: {
-                        type: 'array',
-                        items: { type: 'string' },
-                      },
                       commodities: {
                         type: 'array',
                         items: {
                           type: 'object',
                           properties: {
                             name: { type: 'string' },
+                            varieties: { type: 'array', items: { type: 'string' } },
                             sizes: { type: 'array', items: { type: 'string' } },
                           },
                         },
@@ -123,6 +120,11 @@ export const loginOptions = {
                       rouging: { type: 'string', nullable: true },
                       tuberType: { type: 'string', nullable: true },
                       grader: { type: 'string', nullable: true },
+                      customFields: {
+                        type: 'object',
+                        nullable: true,
+                        description: 'Custom user-defined fields for future customisations',
+                      },
                     },
                   },
                   createdAt: { type: 'string', format: 'date-time' },

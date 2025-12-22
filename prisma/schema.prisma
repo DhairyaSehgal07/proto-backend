@@ -109,8 +109,6 @@ model ColdStorage {
 model Preferences {
   id           String         @id @default(auto()) @map("_id") @db.ObjectId
 
-  varieties    String[]       @default(["Atlantic", "Cardinal", "Chipsona 1", "Chipsona 2", "Chipsona 3", "Colomba", "Desiree", "Diamond", "FC - 11", "FC - 12", "FC - 5", "Fry Sona", "Himalini", "K. Badshah", "K. Chandramukhi", "K. Jyoti", "K. Pukhraj", "Kuroda", "Khyati", "L.R", "Lima", "Mohan", "Pushkar", "SU - Khyati", "Super Six", "Surya"])
-
   commodities  CommodityObj[]
 
   generation   String?
@@ -118,7 +116,10 @@ model Preferences {
   tuberType    String?
   grader       String?
 
- incoming     IncomingPrefs
+  incoming     IncomingPrefs
+
+  /// Custom, user-defined fields for future customisations
+  customFields Json?
 
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
@@ -128,10 +129,13 @@ model Preferences {
   @@index([createdAt])
 }
 
+
 type CommodityObj {
-  name  String
-  sizes String[]
+  name      String
+  varieties String[]
+  sizes     String[]
 }
+
 
 type IncomingPrefs {
   showCustomMarka Boolean @default(false)

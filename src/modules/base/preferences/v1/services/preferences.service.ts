@@ -94,13 +94,13 @@ export class PreferencesService {
    */
   async create(data: CreatePreferencesRequest): Promise<PreferencesResponse> {
     const preferences = await this.dao.create({
-      varieties: data.varieties ?? [],
       commodities: data.commodities ?? [],
       generation: data.generation ?? null,
       rouging: data.rouging ?? null,
       tuberType: data.tuberType ?? null,
       grader: data.grader ?? null,
       incoming: data.incoming ?? { showCustomMarka: false },
+      customFields: data.customFields ?? null,
     });
 
     return this.mapToResponse(preferences);
@@ -117,13 +117,13 @@ export class PreferencesService {
     }
 
     const preferences = await this.dao.update(id, {
-      ...(data.varieties !== undefined && { varieties: data.varieties }),
       ...(data.commodities !== undefined && { commodities: data.commodities }),
       ...(data.generation !== undefined && { generation: data.generation }),
       ...(data.rouging !== undefined && { rouging: data.rouging }),
       ...(data.tuberType !== undefined && { tuberType: data.tuberType }),
       ...(data.grader !== undefined && { grader: data.grader }),
       ...(data.incoming !== undefined && { incoming: data.incoming }),
+      ...(data.customFields !== undefined && { customFields: data.customFields }),
     });
 
     return this.mapToResponse(preferences);
@@ -148,17 +148,44 @@ export class PreferencesService {
   private mapToResponse(
     preferences: PrismaTypes.PreferencesGetPayload<Record<string, never>>
   ): PreferencesResponse {
-    return {
+    // Properly handle Prisma's Json type for customFields
+    // Prisma's Json type can be: string | number | boolean | JsonObject | JsonArray | null
+    let customFields: Record<string, unknown> | null = null;
+
+    if (preferences.customFields !== null && preferences.customFields !== undefined) {
+      // Check if it's an object (not array, not null, not primitive)
+      if (
+        typeof preferences.customFields === 'object' &&
+        !Array.isArray(preferences.customFields)
+      ) {
+        // Directly cast to our expected type - Prisma's JsonObject should preserve all properties
+        // Use JSON.parse(JSON.stringify()) to ensure we get a plain object
+        try {
+          const jsonString = JSON.stringify(preferences.customFields);
+          const parsed = JSON.parse(jsonString);
+          if (typeof parsed === 'object' && !Array.isArray(parsed) && parsed !== null) {
+            customFields = parsed as Record<string, unknown>;
+          }
+        } catch (_error) {
+          // If JSON serialization fails, fall back to direct cast
+          customFields = preferences.customFields as Record<string, unknown>;
+        }
+      }
+    }
+
+    const response = {
       id: preferences.id,
-      varieties: preferences.varieties ?? [],
       commodities: preferences.commodities ?? [],
       generation: preferences.generation ?? null,
       rouging: preferences.rouging ?? null,
       tuberType: preferences.tuberType ?? null,
       grader: preferences.grader ?? null,
       incoming: preferences.incoming ?? { showCustomMarka: false },
+      customFields,
       createdAt: preferences.createdAt,
       updatedAt: preferences.updatedAt,
     };
+
+    return response;
   }
 }

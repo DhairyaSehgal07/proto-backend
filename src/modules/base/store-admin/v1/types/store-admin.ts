@@ -82,13 +82,13 @@ export interface IncomingPrefs {
  */
 export interface Preferences {
   id: string;
-  varieties: string[];
   commodities: CommodityObj[];
   generation: string | null;
   rouging: string | null;
   tuberType: string | null;
   grader: string | null;
   incoming: IncomingPrefs;
+  customFields: Record<string, unknown> | null;
 }
 
 /**

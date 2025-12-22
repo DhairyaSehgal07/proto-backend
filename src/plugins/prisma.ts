@@ -10,6 +10,7 @@ declare module 'fastify' {
 }
 
 const prismaPlugin: FastifyPluginAsync = fp(async (server: FastifyInstance, _options) => {
+  // Prisma 6.19.0 has native MongoDB support - no adapter needed
   const prisma: PrismaClient = new PrismaClient();
 
   await prisma.$connect();

@@ -698,7 +698,6 @@ export class StoreAdminService {
     const preferences: Preferences | null = coldStorage.preferences
       ? {
           id: coldStorage.preferences.id,
-          varieties: coldStorage.preferences.varieties ?? [],
           commodities: coldStorage.preferences.commodities ?? [],
           generation: coldStorage.preferences.generation ?? null,
           rouging: coldStorage.preferences.rouging ?? null,
@@ -707,6 +706,12 @@ export class StoreAdminService {
           incoming: coldStorage.preferences.incoming ?? {
             showCustomMarka: false,
           },
+          customFields:
+            coldStorage.preferences.customFields &&
+            typeof coldStorage.preferences.customFields === 'object' &&
+            !Array.isArray(coldStorage.preferences.customFields)
+              ? (coldStorage.preferences.customFields as Record<string, unknown>)
+              : null,
         }
       : null;
 
@@ -2771,7 +2776,8 @@ export class StoreAdminService {
         });
       }
 
-      const farmerData = farmerMap.get(farmerKey)!;
+      const farmerData = farmerMap.get(farmerKey);
+      if (!farmerData) continue;
 
       // Process matching varieties
       for (const orderVariety of orderVarieties) {
@@ -2795,7 +2801,8 @@ export class StoreAdminService {
             });
           }
 
-          const locationData = locationMap.get(bagSize.locationId)!;
+          const locationData = locationMap.get(bagSize.locationId);
+          if (!locationData) continue;
           const existingLocationData = locationData.sizes.get(bagSize.name) || {
             totalInitial: 0,
             totalCurrent: 0,

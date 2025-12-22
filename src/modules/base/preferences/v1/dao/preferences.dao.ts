@@ -78,7 +78,6 @@ export class PreferencesDAO {
     try {
       return await this.fastify.prisma.preferences.create({
         data: {
-          varieties: data.varieties ?? [],
           commodities: data.commodities ?? [],
           generation: data.generation ?? null,
           rouging: data.rouging ?? null,
@@ -99,7 +98,6 @@ export class PreferencesDAO {
   async update(id: string, data: UpdatePreferencesRequest): Promise<PreferencesWithRelations> {
     try {
       const updateData: Prisma.PreferencesUpdateInput = {
-        ...(data.varieties !== undefined && { varieties: data.varieties }),
         ...(data.commodities !== undefined && { commodities: data.commodities }),
         ...(data.generation !== undefined && { generation: data.generation }),
         ...(data.rouging !== undefined && { rouging: data.rouging }),

@@ -19,13 +19,13 @@ export const listOptions = {
               type: 'object',
               properties: {
                 id: { type: 'string' },
-                varieties: { type: 'array', items: { type: 'string' } },
                 commodities: {
                   type: 'array',
                   items: {
                     type: 'object',
                     properties: {
                       name: { type: 'string' },
+                      varieties: { type: 'array', items: { type: 'string' } },
                       sizes: { type: 'array', items: { type: 'string' } },
                     },
                   },
@@ -39,6 +39,16 @@ export const listOptions = {
                   properties: {
                     showCustomMarka: { type: 'boolean' },
                   },
+                },
+                customFields: {
+                  anyOf: [
+                    {
+                      type: 'object',
+                      additionalProperties: true,
+                    },
+                    { type: 'null' },
+                  ],
+                  description: 'Custom user-defined fields for future customisations',
                 },
                 createdAt: { type: 'string', format: 'date-time' },
                 updatedAt: { type: 'string', format: 'date-time' },
@@ -77,13 +87,13 @@ export const getByIdOptions = {
             type: 'object',
             properties: {
               id: { type: 'string' },
-              varieties: { type: 'array', items: { type: 'string' } },
               commodities: {
                 type: 'array',
                 items: {
                   type: 'object',
                   properties: {
                     name: { type: 'string' },
+                    varieties: { type: 'array', items: { type: 'string' } },
                     sizes: { type: 'array', items: { type: 'string' } },
                   },
                 },
@@ -97,6 +107,12 @@ export const getByIdOptions = {
                 properties: {
                   showCustomMarka: { type: 'boolean' },
                 },
+              },
+              customFields: {
+                type: ['object', 'null'],
+                nullable: true,
+                additionalProperties: true,
+                description: 'Custom user-defined fields for future customisations',
               },
               createdAt: { type: 'string', format: 'date-time' },
               updatedAt: { type: 'string', format: 'date-time' },
@@ -138,13 +154,13 @@ export const createOptions = {
             type: 'object',
             properties: {
               id: { type: 'string' },
-              varieties: { type: 'array', items: { type: 'string' } },
               commodities: {
                 type: 'array',
                 items: {
                   type: 'object',
                   properties: {
                     name: { type: 'string' },
+                    varieties: { type: 'array', items: { type: 'string' } },
                     sizes: { type: 'array', items: { type: 'string' } },
                   },
                 },
@@ -158,6 +174,12 @@ export const createOptions = {
                 properties: {
                   showCustomMarka: { type: 'boolean' },
                 },
+              },
+              customFields: {
+                type: ['object', 'null'],
+                nullable: true,
+                additionalProperties: true,
+                description: 'Custom user-defined fields for future customisations',
               },
               createdAt: { type: 'string', format: 'date-time' },
               updatedAt: { type: 'string', format: 'date-time' },
@@ -200,13 +222,13 @@ export const updateOptions = {
             type: 'object',
             properties: {
               id: { type: 'string' },
-              varieties: { type: 'array', items: { type: 'string' } },
               commodities: {
                 type: 'array',
                 items: {
                   type: 'object',
                   properties: {
                     name: { type: 'string' },
+                    varieties: { type: 'array', items: { type: 'string' } },
                     sizes: { type: 'array', items: { type: 'string' } },
                   },
                 },
@@ -220,6 +242,12 @@ export const updateOptions = {
                 properties: {
                   showCustomMarka: { type: 'boolean' },
                 },
+              },
+              customFields: {
+                type: ['object', 'null'],
+                nullable: true,
+                additionalProperties: true,
+                description: 'Custom user-defined fields for future customisations',
               },
               createdAt: { type: 'string', format: 'date-time' },
               updatedAt: { type: 'string', format: 'date-time' },

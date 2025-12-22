@@ -10,6 +10,7 @@ export type Preferences = PreferencesModel;
  */
 export interface CommodityObj {
   name: string;
+  varieties: string[];
   sizes: string[];
 }
 
@@ -25,13 +26,13 @@ export interface IncomingPrefs {
  */
 export interface PreferencesResponse {
   id: string;
-  varieties: string[];
   commodities: CommodityObj[];
   generation: string | null;
   rouging: string | null;
   tuberType: string | null;
   grader: string | null;
   incoming: IncomingPrefs;
+  customFields: Record<string, any> | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -40,26 +41,26 @@ export interface PreferencesResponse {
  * Request type for creating preferences
  */
 export interface CreatePreferencesRequest {
-  varieties?: string[];
   commodities?: CommodityObj[];
   generation?: string | null;
   rouging?: string | null;
   tuberType?: string | null;
   grader?: string | null;
   incoming?: IncomingPrefs;
+  customFields?: Record<string, any> | null;
 }
 
 /**
  * Request type for updating preferences
  */
 export interface UpdatePreferencesRequest {
-  varieties?: string[];
   commodities?: CommodityObj[];
   generation?: string | null;
   rouging?: string | null;
   tuberType?: string | null;
   grader?: string | null;
   incoming?: IncomingPrefs;
+  customFields?: Record<string, any> | null;
 }
 
 /**
