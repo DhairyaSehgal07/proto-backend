@@ -241,12 +241,17 @@ export class ColdStorageService {
     // Always include preferences field, even if null
     const preferences: Preferences | null = coldStorage.preferences
       ? {
-          varieties: coldStorage.preferences.varieties ?? [],
           commodities: coldStorage.preferences.commodities ?? [],
           generation: coldStorage.preferences.generation ?? null,
           rouging: coldStorage.preferences.rouging ?? null,
           tuberType: coldStorage.preferences.tuberType ?? null,
           grader: coldStorage.preferences.grader ?? null,
+          incoming: coldStorage.preferences.incoming ?? {
+            showCustomMarka: false,
+          },
+          customFields: coldStorage.preferences.customFields
+            ? (coldStorage.preferences.customFields as Record<string, any>)
+            : null,
         }
       : null;
 

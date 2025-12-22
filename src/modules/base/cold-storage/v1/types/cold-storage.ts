@@ -10,6 +10,7 @@ export type ColdStorage = ColdStorageModel;
  */
 export interface CommodityObj {
   name: string;
+  varieties: string[];
   sizes: string[];
 }
 
@@ -17,12 +18,15 @@ export interface CommodityObj {
  * Preferences type for API responses (excludes internal fields)
  */
 export interface Preferences {
-  varieties: string[];
   commodities: CommodityObj[];
   generation: string | null;
   rouging: string | null;
   tuberType: string | null;
   grader: string | null;
+  incoming?: {
+    showCustomMarka: boolean;
+  };
+  customFields?: Record<string, any> | null;
 }
 
 /**

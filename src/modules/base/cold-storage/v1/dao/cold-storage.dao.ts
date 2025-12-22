@@ -95,15 +95,15 @@ export class ColdStorageDAO {
           preferences: data.preferences
             ? {
                 create: {
-                  varieties: data.preferences.varieties ?? [],
                   commodities: data.preferences.commodities ?? [],
                   generation: data.preferences.generation ?? null,
                   rouging: data.preferences.rouging ?? null,
                   tuberType: data.preferences.tuberType ?? null,
                   grader: data.preferences.grader ?? null,
-                  incoming: {
+                  incoming: data.preferences.incoming ?? {
                     showCustomMarka: false,
                   },
+                  customFields: data.preferences.customFields ?? null,
                 },
               }
             : undefined,
@@ -144,23 +144,24 @@ export class ColdStorageDAO {
           updateData.preferences = {
             upsert: {
               create: {
-                varieties: data.preferences.varieties ?? [],
                 commodities: data.preferences.commodities ?? [],
                 generation: data.preferences.generation ?? null,
                 rouging: data.preferences.rouging ?? null,
                 tuberType: data.preferences.tuberType ?? null,
                 grader: data.preferences.grader ?? null,
-                incoming: {
+                incoming: data.preferences.incoming ?? {
                   showCustomMarka: false,
                 },
+                customFields: data.preferences.customFields ?? null,
               },
               update: {
-                varieties: data.preferences.varieties ?? [],
                 commodities: data.preferences.commodities ?? [],
                 generation: data.preferences.generation ?? null,
                 rouging: data.preferences.rouging ?? null,
                 tuberType: data.preferences.tuberType ?? null,
                 grader: data.preferences.grader ?? null,
+                incoming: data.preferences.incoming,
+                customFields: data.preferences.customFields ?? null,
               },
             },
           };
