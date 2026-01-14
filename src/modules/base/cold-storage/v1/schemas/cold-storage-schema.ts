@@ -6,25 +6,33 @@ import { z } from 'zod';
 export const PlanEnum = z.enum(['Basic', 'Pro', 'Enterprise']);
 
 /**
- * Preferences schema
+ * Commodity object schema - matches Prisma CommodityObj type
+ */
+export const commodityObjSchema = z.object({
+  name: z.string().min(1, 'Commodity name is required'),
+  varieties: z.array(z.string()).default([]),
+  sizes: z.array(z.string()).default([]),
+});
+
+/**
+ * Incoming preferences schema - matches Prisma IncomingPrefs type
+ */
+export const incomingPrefsSchema = z.object({
+  showCustomMarka: z.boolean().default(false),
+});
+
+/**
+ * Preferences schema - matches Prisma Preferences model
  */
 export const preferencesSchema = z
   .object({
-    commodities: z
-      .array(
-        z.object({
-          name: z.string(),
-          sizes: z.array(z.string()).default([]),
-        })
-      )
-      .default([]),
-
-    varieties: z.array(z.string()).default([]),
-
+    commodities: z.array(commodityObjSchema).default([]).optional(),
     generation: z.string().nullable().optional(),
     rouging: z.string().nullable().optional(),
     tuberType: z.string().nullable().optional(),
     grader: z.string().nullable().optional(),
+    incoming: incomingPrefsSchema.optional(),
+    customFields: z.record(z.string(), z.any()).nullable().optional(),
   })
   .optional()
   .nullable();

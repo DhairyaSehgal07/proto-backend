@@ -23,8 +23,17 @@ export const createStoreAdminSchema = z.object({
 
 /**
  * UPDATE StoreAdmin schema
+ * Supports mobile numbers with or without country code for backward compatibility
  */
-export const updateStoreAdminSchema = createStoreAdminSchema.partial();
+export const updateStoreAdminSchema = createStoreAdminSchema.partial().extend({
+  mobileNumber: z
+    .string()
+    .refine(
+      (val) => /^\+[1-9]\d{1,3}\d{7,15}$/.test(val) || /^[0-9]{10}$/.test(val),
+      'Mobile number must be either +[country code][number] (e.g., +919876543210) or 10 digits (e.g., 9876543210)'
+    )
+    .optional(),
+});
 
 /**
  * PARAM schema — used for routes like /:id

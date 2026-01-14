@@ -31,21 +31,30 @@ export const listOptions = {
                   type: 'object',
                   nullable: true,
                   properties: {
-                    varieties: { type: 'array', items: { type: 'string' } },
                     commodities: {
                       type: 'array',
                       items: {
                         type: 'object',
                         properties: {
                           name: { type: 'string' },
+                          varieties: { type: 'array', items: { type: 'string' } },
                           sizes: { type: 'array', items: { type: 'string' } },
                         },
+                        required: ['name'],
                       },
                     },
                     generation: { type: 'string', nullable: true },
                     rouging: { type: 'string', nullable: true },
                     tuberType: { type: 'string', nullable: true },
                     grader: { type: 'string', nullable: true },
+                    incoming: {
+                      type: 'object',
+                      nullable: true,
+                      properties: {
+                        showCustomMarka: { type: 'boolean' },
+                      },
+                    },
+                    customFields: { type: 'object', nullable: true },
                   },
                 },
                 createdAt: { type: 'string', format: 'date-time' },
@@ -94,12 +103,29 @@ export const getByIdOptions = {
                 type: 'object',
                 nullable: true,
                 properties: {
-                  bagSizes: { type: 'array', items: { type: 'string' } },
-                  commodities: { type: 'array', items: { type: 'string' } },
+                  commodities: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        name: { type: 'string' },
+                        varieties: { type: 'array', items: { type: 'string' } },
+                        sizes: { type: 'array', items: { type: 'string' } },
+                      },
+                      required: ['name'],
+                    },
+                  },
                   generation: { type: 'string', nullable: true },
                   rouging: { type: 'string', nullable: true },
                   tuberType: { type: 'string', nullable: true },
                   grader: { type: 'string', nullable: true },
+                  incoming: {
+                    type: 'object',
+                    properties: {
+                      showCustomMarka: { type: 'boolean' },
+                    },
+                  },
+                  customFields: { type: 'object', nullable: true },
                 },
               },
               isPaid: { type: 'boolean' },
@@ -136,6 +162,48 @@ export const createOptions = {
   schema: {
     description: 'Create a new cold storage',
     tags: ['cold-storage'],
+    body: {
+      type: 'object',
+      required: ['name', 'address', 'mobileNumber', 'capacity'],
+      properties: {
+        name: { type: 'string', minLength: 2 },
+        address: { type: 'string', minLength: 5 },
+        mobileNumber: { type: 'string', pattern: '^[0-9]{10}$' },
+        capacity: { type: 'number', minimum: 0 },
+        imageUrl: { type: 'string', format: 'uri' },
+        isPaid: { type: 'boolean' },
+        isActive: { type: 'boolean' },
+        plan: { type: 'string', enum: ['Basic', 'Pro', 'Enterprise'] },
+        preferences: {
+          type: 'object',
+          properties: {
+            commodities: {
+              type: 'array',
+              items: {
+                type: 'object',
+                required: ['name'],
+                properties: {
+                  name: { type: 'string' },
+                  varieties: { type: 'array', items: { type: 'string' } },
+                  sizes: { type: 'array', items: { type: 'string' } },
+                },
+              },
+            },
+            generation: { type: 'string', nullable: true },
+            rouging: { type: 'string', nullable: true },
+            tuberType: { type: 'string', nullable: true },
+            grader: { type: 'string', nullable: true },
+            incoming: {
+              type: 'object',
+              properties: {
+                showCustomMarka: { type: 'boolean' },
+              },
+            },
+            customFields: { type: 'object', nullable: true },
+          },
+        },
+      },
+    },
     response: {
       201: {
         type: 'object',
@@ -154,12 +222,29 @@ export const createOptions = {
                 type: 'object',
                 nullable: true,
                 properties: {
-                  bagSizes: { type: 'array', items: { type: 'string' } },
-                  commodities: { type: 'array', items: { type: 'string' } },
+                  commodities: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        name: { type: 'string' },
+                        varieties: { type: 'array', items: { type: 'string' } },
+                        sizes: { type: 'array', items: { type: 'string' } },
+                      },
+                      required: ['name'],
+                    },
+                  },
                   generation: { type: 'string', nullable: true },
                   rouging: { type: 'string', nullable: true },
                   tuberType: { type: 'string', nullable: true },
                   grader: { type: 'string', nullable: true },
+                  incoming: {
+                    type: 'object',
+                    properties: {
+                      showCustomMarka: { type: 'boolean' },
+                    },
+                  },
+                  customFields: { type: 'object', nullable: true },
                 },
               },
               isPaid: { type: 'boolean' },
@@ -178,9 +263,21 @@ export const createOptions = {
           success: { type: 'boolean' },
           error: {
             type: 'object',
+            required: ['code', 'message'],
             properties: {
               code: { type: 'string' },
               message: { type: 'string' },
+              details: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  required: ['path', 'message'],
+                  properties: {
+                    path: { type: 'string' },
+                    message: { type: 'string' },
+                  },
+                },
+              },
             },
           },
         },
@@ -215,12 +312,29 @@ export const updateOptions = {
                 type: 'object',
                 nullable: true,
                 properties: {
-                  bagSizes: { type: 'array', items: { type: 'string' } },
-                  commodities: { type: 'array', items: { type: 'string' } },
+                  commodities: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        name: { type: 'string' },
+                        varieties: { type: 'array', items: { type: 'string' } },
+                        sizes: { type: 'array', items: { type: 'string' } },
+                      },
+                      required: ['name'],
+                    },
+                  },
                   generation: { type: 'string', nullable: true },
                   rouging: { type: 'string', nullable: true },
                   tuberType: { type: 'string', nullable: true },
                   grader: { type: 'string', nullable: true },
+                  incoming: {
+                    type: 'object',
+                    properties: {
+                      showCustomMarka: { type: 'boolean' },
+                    },
+                  },
+                  customFields: { type: 'object', nullable: true },
                 },
               },
               isPaid: { type: 'boolean' },
@@ -239,9 +353,21 @@ export const updateOptions = {
           success: { type: 'boolean' },
           error: {
             type: 'object',
+            required: ['code', 'message'],
             properties: {
               code: { type: 'string' },
               message: { type: 'string' },
+              details: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  required: ['path', 'message'],
+                  properties: {
+                    path: { type: 'string' },
+                    message: { type: 'string' },
+                  },
+                },
+              },
             },
           },
         },

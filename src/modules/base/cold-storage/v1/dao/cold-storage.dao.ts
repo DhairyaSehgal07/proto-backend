@@ -82,6 +82,9 @@ export class ColdStorageDAO {
    */
   async create(data: CreateColdStorageRequest): Promise<ColdStorageWithPreferences> {
     try {
+      // Always create preferences with default values if not provided
+      const preferencesData = data.preferences || {};
+
       return await this.fastify.prisma.coldStorage.create({
         data: {
           name: data.name,
@@ -92,21 +95,19 @@ export class ColdStorageDAO {
           isPaid: data.isPaid ?? false,
           isActive: data.isActive ?? true,
           plan: data.plan ?? 'Basic',
-          preferences: data.preferences
-            ? {
-                create: {
-                  commodities: data.preferences.commodities ?? [],
-                  generation: data.preferences.generation ?? null,
-                  rouging: data.preferences.rouging ?? null,
-                  tuberType: data.preferences.tuberType ?? null,
-                  grader: data.preferences.grader ?? null,
-                  incoming: data.preferences.incoming ?? {
-                    showCustomMarka: false,
-                  },
-                  customFields: data.preferences.customFields ?? null,
-                },
-              }
-            : undefined,
+          preferences: {
+            create: {
+              commodities: preferencesData.commodities ?? [],
+              generation: preferencesData.generation ?? null,
+              rouging: preferencesData.rouging ?? null,
+              tuberType: preferencesData.tuberType ?? null,
+              grader: preferencesData.grader ?? null,
+              incoming: preferencesData.incoming ?? {
+                showCustomMarka: false,
+              },
+              customFields: preferencesData.customFields ?? null,
+            },
+          },
         },
         include: {
           preferences: true,

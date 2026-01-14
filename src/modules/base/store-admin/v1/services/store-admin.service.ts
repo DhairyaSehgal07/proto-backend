@@ -231,16 +231,25 @@ export class StoreAdminService {
     // Validate mobile number if provided
     let normalizedMobileNumber: string | undefined;
     if (data.mobileNumber !== undefined) {
-      const mobileValidation = validateMobileNumber(data.mobileNumber);
-      if (!mobileValidation.isValid) {
-        throw new StoreAdminValidationError(
-          mobileValidation.error || 'Invalid mobile number format'
-        );
-      }
+      // Check if it's already a 10-digit number (without country code)
+      const isTenDigits = /^[0-9]{10}$/.test(data.mobileNumber);
 
-      // Normalize mobile number (remove country code) - database stores without country code
-      normalizedMobileNumber =
-        mobileValidation.number || data.mobileNumber.replace(/^\+\d{1,3}/, '');
+      if (isTenDigits) {
+        // Already in the correct format (10 digits), use it directly
+        normalizedMobileNumber = data.mobileNumber;
+      } else {
+        // Validate mobile number with country code
+        const mobileValidation = validateMobileNumber(data.mobileNumber);
+        if (!mobileValidation.isValid) {
+          throw new StoreAdminValidationError(
+            mobileValidation.error || 'Invalid mobile number format'
+          );
+        }
+
+        // Normalize mobile number (remove country code) - database stores without country code
+        normalizedMobileNumber =
+          mobileValidation.number || data.mobileNumber.replace(/^\+\d{1,3}/, '');
+      }
 
       // Check if mobile number is already used by another store admin in the same cold storage (use normalized number)
       const existing = await this.dao.findAll({

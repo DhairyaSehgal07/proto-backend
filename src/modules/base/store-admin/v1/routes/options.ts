@@ -279,9 +279,21 @@ export const createOptions = {
           success: { type: 'boolean' },
           error: {
             type: 'object',
+            required: ['code', 'message'],
             properties: {
               code: { type: 'string' },
               message: { type: 'string' },
+              details: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  required: ['path', 'message'],
+                  properties: {
+                    path: { type: 'string' },
+                    message: { type: 'string' },
+                  },
+                },
+              },
             },
           },
         },
@@ -326,9 +338,21 @@ export const updateOptions = {
           success: { type: 'boolean' },
           error: {
             type: 'object',
+            required: ['code', 'message'],
             properties: {
               code: { type: 'string' },
               message: { type: 'string' },
+              details: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  required: ['path', 'message'],
+                  properties: {
+                    path: { type: 'string' },
+                    message: { type: 'string' },
+                  },
+                },
+              },
             },
           },
         },
@@ -436,9 +460,21 @@ export const registerFarmerOptions = {
           success: { type: 'boolean' },
           error: {
             type: 'object',
+            required: ['code', 'message'],
             properties: {
               code: { type: 'string' },
               message: { type: 'string' },
+              details: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  required: ['path', 'message'],
+                  properties: {
+                    path: { type: 'string' },
+                    message: { type: 'string' },
+                  },
+                },
+              },
             },
           },
         },
@@ -610,9 +646,21 @@ export const daybookOptions = {
           success: { type: 'boolean' },
           error: {
             type: 'object',
+            required: ['code', 'message'],
             properties: {
               code: { type: 'string' },
               message: { type: 'string' },
+              details: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  required: ['path', 'message'],
+                  properties: {
+                    path: { type: 'string' },
+                    message: { type: 'string' },
+                  },
+                },
+              },
             },
           },
         },
@@ -679,9 +727,21 @@ export const getFarmersOptions = {
           success: { type: 'boolean' },
           error: {
             type: 'object',
+            required: ['code', 'message'],
             properties: {
               code: { type: 'string' },
               message: { type: 'string' },
+              details: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  required: ['path', 'message'],
+                  properties: {
+                    path: { type: 'string' },
+                    message: { type: 'string' },
+                  },
+                },
+              },
             },
           },
         },
@@ -764,9 +824,21 @@ export const getGatePassNumberOptions = {
           success: { type: 'boolean' },
           error: {
             type: 'object',
+            required: ['code', 'message'],
             properties: {
               code: { type: 'string' },
               message: { type: 'string' },
+              details: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  required: ['path', 'message'],
+                  properties: {
+                    path: { type: 'string' },
+                    message: { type: 'string' },
+                  },
+                },
+              },
             },
           },
         },
@@ -853,9 +925,21 @@ export const getFarmerByIdOptions = {
           success: { type: 'boolean' },
           error: {
             type: 'object',
+            required: ['code', 'message'],
             properties: {
               code: { type: 'string' },
               message: { type: 'string' },
+              details: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  required: ['path', 'message'],
+                  properties: {
+                    path: { type: 'string' },
+                    message: { type: 'string' },
+                  },
+                },
+              },
             },
           },
         },
@@ -1003,9 +1087,21 @@ export const getFarmerOrdersOptions = {
           success: { type: 'boolean' },
           error: {
             type: 'object',
+            required: ['code', 'message'],
             properties: {
               code: { type: 'string' },
               message: { type: 'string' },
+              details: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  required: ['path', 'message'],
+                  properties: {
+                    path: { type: 'string' },
+                    message: { type: 'string' },
+                  },
+                },
+              },
             },
           },
         },
@@ -1144,9 +1240,21 @@ export const varietyInventoryAnalysisOptions = {
           success: { type: 'boolean' },
           error: {
             type: 'object',
+            required: ['code', 'message'],
             properties: {
               code: { type: 'string' },
               message: { type: 'string' },
+              details: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  required: ['path', 'message'],
+                  properties: {
+                    path: { type: 'string' },
+                    message: { type: 'string' },
+                  },
+                },
+              },
             },
           },
         },
@@ -1342,9 +1450,21 @@ export const coldStorageAnalyticsOptions = {
           success: { type: 'boolean' },
           error: {
             type: 'object',
+            required: ['code', 'message'],
             properties: {
               code: { type: 'string' },
               message: { type: 'string' },
+              details: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  required: ['path', 'message'],
+                  properties: {
+                    path: { type: 'string' },
+                    message: { type: 'string' },
+                  },
+                },
+              },
             },
           },
         },
