@@ -153,6 +153,7 @@ export interface RegisterFarmerResponse {
     notes: string | null;
     createdAt: Date;
     updatedAt: Date;
+    paymentHistory: PaymentHistoryItem[];
   };
 }
 
@@ -206,6 +207,8 @@ export interface DaybookOrderItem {
     id: string;
     name: string;
   };
+  // Rent entry associated with this voucher
+  rentEntry?: PaymentHistoryItem | null;
 }
 
 /**
@@ -226,6 +229,21 @@ export interface DaybookResponse {
 }
 
 /**
+ * Payment history item type
+ */
+export interface PaymentHistoryItem {
+  id: string;
+  date: Date;
+  amount: number;
+  type: 'RENT' | 'PAYMENT';
+  remarks: string;
+  createdBy: string | null;
+  voucherId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
  * Farmer response type for /farmer route
  */
 export interface FarmerResponse {
@@ -236,6 +254,7 @@ export interface FarmerResponse {
   address: string;
   accountNumber: number;
   isActive: boolean;
+  paymentHistory: PaymentHistoryItem[];
 }
 
 /**

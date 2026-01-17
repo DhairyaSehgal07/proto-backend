@@ -14,6 +14,7 @@ export const RESOURCES = [
   'farmer-storage-links',
   'cold-storage', // for updating cold storage details
   'store-admins', // for managing other admins (Manager and Assistant roles)
+  'payment-history', // for managing payment history
 ] as const;
 
 /**

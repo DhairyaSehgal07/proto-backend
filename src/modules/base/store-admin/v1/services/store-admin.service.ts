@@ -648,6 +648,9 @@ export class StoreAdminService {
         notes: data.notes?.trim() ?? null,
         isActive: true,
       },
+      include: {
+        paymentHistory: true,
+      },
     });
 
     return {
@@ -670,6 +673,17 @@ export class StoreAdminService {
         notes: link.notes,
         createdAt: link.createdAt,
         updatedAt: link.updatedAt,
+        paymentHistory: link.paymentHistory.map((payment) => ({
+          id: payment.id,
+          date: payment.date,
+          amount: payment.amount,
+          type: payment.type,
+          remarks: payment.remarks,
+          createdBy: payment.createdBy,
+          voucherId: payment.voucherId,
+          createdAt: payment.createdAt,
+          updatedAt: payment.updatedAt,
+        })),
       },
     };
   }
@@ -932,6 +946,48 @@ export class StoreAdminService {
       return orders;
     };
 
+    const enrichOrdersWithRentEntries = async (
+      orders: DaybookOrderItem[]
+    ): Promise<DaybookOrderItem[]> => {
+      const orderIds = orders.map((order) => order.id);
+
+      if (orderIds.length === 0) {
+        return orders;
+      }
+
+      // Fetch payment entries for these vouchers (only one payment entry per voucher)
+      const paymentEntries = await this.fastify.prisma.farmerPaymentHistory.findMany({
+        where: {
+          voucherId: { in: orderIds },
+        },
+        select: {
+          id: true,
+          date: true,
+          amount: true,
+          type: true,
+          remarks: true,
+          createdBy: true,
+          voucherId: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      // Map: voucherId -> payment entry (filter out null voucherIds)
+      const paymentEntryMap = new Map(
+        paymentEntries
+          .filter(
+            (entry): entry is typeof entry & { voucherId: string } => entry.voucherId !== null
+          )
+          .map((entry) => [entry.voucherId, entry])
+      );
+
+      return orders.map((order) => ({
+        ...order,
+        rentEntry: paymentEntryMap.get(order.id) ?? null,
+      }));
+    };
+
     // Common select for farmer storage link
     const farmerStorageLinkSelect = {
       id: true,
@@ -1036,8 +1092,11 @@ export class StoreAdminService {
 
         sortBagSizes(daybookOrders);
 
+        // Enrich with rent entries
+        const enrichedWithRentEntries = await enrichOrdersWithRentEntries(daybookOrders);
+
         return {
-          data: daybookOrders,
+          data: enrichedWithRentEntries,
           pagination: createPaginationMeta(count, page, limit),
         };
       }
@@ -1148,8 +1207,11 @@ export class StoreAdminService {
         // Sort bag sizes
         sortBagSizes(enrichedDaybookOrders);
 
+        // Enrich with rent entries
+        const enrichedWithRentEntries = await enrichOrdersWithRentEntries(enrichedDaybookOrders);
+
         return {
-          data: enrichedDaybookOrders,
+          data: enrichedWithRentEntries,
           pagination: createPaginationMeta(count, page, limit),
         };
       }
@@ -1428,8 +1490,11 @@ export class StoreAdminService {
         // Sort bag sizes
         sortBagSizes(enrichedDaybookOrders);
 
+        // Enrich with rent entries
+        const enrichedWithRentEntries = await enrichOrdersWithRentEntries(enrichedDaybookOrders);
+
         return {
-          data: enrichedDaybookOrders,
+          data: enrichedWithRentEntries,
           pagination: createPaginationMeta(totalCount, page, limit),
         };
       }
@@ -1443,10 +1508,10 @@ export class StoreAdminService {
 
   /**
    * Get all farmers for a cold storage
-   * Returns farmer storage links with farmer information populated
+   * Returns farmer storage links with farmer information and payment history populated
    */
   async getFarmers(coldStorageId: string): Promise<FarmersListResponse> {
-    // Query all farmer storage links for this cold storage with farmer populated
+    // Query all farmer storage links for this cold storage with farmer and payment history populated
     const links = await this.fastify.prisma.farmerStorageLink.findMany({
       where: {
         coldStorageId,
@@ -1458,6 +1523,11 @@ export class StoreAdminService {
             name: true,
             mobileNumber: true,
             address: true,
+          },
+        },
+        paymentHistory: {
+          orderBy: {
+            createdAt: 'desc',
           },
         },
       },
@@ -1475,6 +1545,17 @@ export class StoreAdminService {
       address: link.farmer.address,
       accountNumber: link.accountNumber,
       isActive: link.isActive,
+      paymentHistory: link.paymentHistory.map((payment) => ({
+        id: payment.id,
+        date: payment.date,
+        amount: payment.amount,
+        type: payment.type,
+        remarks: payment.remarks,
+        createdBy: payment.createdBy,
+        voucherId: payment.voucherId,
+        createdAt: payment.createdAt,
+        updatedAt: payment.updatedAt,
+      })),
     }));
 
     return { data };

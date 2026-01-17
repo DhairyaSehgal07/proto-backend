@@ -53,6 +53,7 @@ export interface CreateIncomingOrderRequest {
   date?: Date;
   remarks?: string;
   currentStockAtThatTime?: number;
+  storeCharge?: number;
   varieties?: VarietyInput[];
 }
 
@@ -67,6 +68,7 @@ export interface UpdateIncomingOrderRequest {
   date?: Date;
   remarks?: string;
   currentStockAtThatTime?: number;
+  storeCharge?: number;
   varieties?: VarietyInput[];
 }
 
@@ -83,6 +85,7 @@ export interface IncomingOrderResponse {
   date: Date | null;
   remarks: string | null;
   currentStockAtThatTime: number | null;
+  storeCharge: number | null;
   varieties: ProcessedVariety[];
   createdById: string | null;
   createdAt: Date;

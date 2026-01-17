@@ -13,7 +13,11 @@ import {
   recalculateStockAfterOrder,
   quantitiesChanged,
 } from './helpers.js';
-import { Prisma, type Prisma as PrismaTypes } from '../../../../../../generated/prisma/client.js';
+import {
+  Prisma,
+  type Prisma as PrismaTypes,
+  PaymentType,
+} from '../../../../../../generated/prisma/client.js';
 
 /**
  * Custom error classes for business logic
@@ -224,6 +228,7 @@ export class IncomingOrderService {
         date: data.date || null,
         remarks: data.remarks || null,
         currentStockAtThatTime: finalCurrentStock,
+        storeCharge: data.storeCharge ?? null,
         varieties: processedVarieties || [], // empty array for null vouchers
         createdById: adminId,
       },
@@ -249,6 +254,21 @@ export class IncomingOrderService {
         },
       },
     });
+
+    // Create FarmerPaymentHistory entry if storeCharge is provided
+    if (data.storeCharge !== undefined && data.storeCharge !== null && data.storeCharge > 0) {
+      await this.fastify.prisma.farmerPaymentHistory.create({
+        data: {
+          farmerStorageLinkId: data.farmerStorageLinkId,
+          date: data.date || order.createdAt,
+          amount: data.storeCharge,
+          type: PaymentType.RENT,
+          remarks: `Store charge for incoming order - Gate Pass #${data.gatePassNumber}`,
+          createdBy: adminId,
+          voucherId: order.id,
+        },
+      });
+    }
 
     const enrichedOrder = await this.enrichOrderWithLocations(order as any);
 
@@ -692,6 +712,8 @@ export class IncomingOrderService {
         ...(data.date !== undefined && { date: data.date || null }),
         ...(data.remarks !== undefined && { remarks: data.remarks || null }),
         ...(finalCurrentStock !== undefined && { currentStockAtThatTime: finalCurrentStock }),
+        // storeCharge: Use ?? null to preserve 0 as a valid value (unlike || null which would convert 0 to null)
+        ...(data.storeCharge !== undefined && { storeCharge: data.storeCharge ?? null }),
         ...(data.varieties !== undefined && { varieties: processedVarieties }), // Can be empty array for null vouchers
       },
       include: {
@@ -728,6 +750,57 @@ export class IncomingOrderService {
         id,
         updatedOrder.currentStockAtThatTime ?? undefined
       );
+    }
+
+    // Handle FarmerPaymentHistory update/creation when storeCharge changes
+    if (data.storeCharge !== undefined) {
+      // Find existing payment history entry linked to this incoming order
+      const existingPaymentHistory = await this.fastify.prisma.farmerPaymentHistory.findFirst({
+        where: {
+          voucherId: id,
+          farmerStorageLinkId: updatedOrder.farmerStorageLinkId,
+        },
+      });
+
+      const finalStoreCharge = updatedOrder.storeCharge ?? null;
+      const shouldHavePayment = finalStoreCharge !== null && finalStoreCharge > 0;
+
+      if (existingPaymentHistory) {
+        // Update existing entry
+        if (shouldHavePayment) {
+          await this.fastify.prisma.farmerPaymentHistory.update({
+            where: { id: existingPaymentHistory.id },
+            data: {
+              amount: finalStoreCharge,
+              date: data.date || updatedOrder.date || existingPaymentHistory.date,
+              remarks: `Store charge for incoming order - Gate Pass #${updatedOrder.gatePassNumber}`,
+            },
+          });
+        } else {
+          // If storeCharge is 0 or null, update amount to 0 (maintain history)
+          await this.fastify.prisma.farmerPaymentHistory.update({
+            where: { id: existingPaymentHistory.id },
+            data: {
+              amount: 0,
+              date: data.date || updatedOrder.date || existingPaymentHistory.date,
+              remarks: `Store charge for incoming order - Gate Pass #${updatedOrder.gatePassNumber}`,
+            },
+          });
+        }
+      } else if (shouldHavePayment) {
+        // Create new entry if storeCharge is provided and > 0
+        await this.fastify.prisma.farmerPaymentHistory.create({
+          data: {
+            farmerStorageLinkId: updatedOrder.farmerStorageLinkId,
+            date: data.date || updatedOrder.date || new Date(),
+            amount: finalStoreCharge,
+            type: PaymentType.RENT,
+            remarks: `Store charge for incoming order - Gate Pass #${updatedOrder.gatePassNumber}`,
+            createdBy: existingOrder.createdById,
+            voucherId: id,
+          },
+        });
+      }
     }
 
     const enrichedOrder = await this.enrichOrderWithLocations(updatedOrder as any);
@@ -867,6 +940,7 @@ export class IncomingOrderService {
       date: order.date,
       remarks: order.remarks,
       currentStockAtThatTime: order.currentStockAtThatTime,
+      storeCharge: order.storeCharge,
       varieties: order.varieties as ProcessedVariety[],
       createdAt: order.createdAt,
       updatedAt: order.updatedAt,

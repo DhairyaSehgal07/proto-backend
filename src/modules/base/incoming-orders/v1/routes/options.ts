@@ -29,6 +29,7 @@ export const createOptions = {
                   gatePassNumber: { type: 'number' },
                   remarks: { type: ['string', 'null'] },
                   currentStockAtThatTime: { type: ['number', 'null'] },
+                  storeCharge: { type: ['number', 'null'] },
                   varieties: {
                     type: 'array',
                     items: {
@@ -79,6 +80,20 @@ export const createOptions = {
                     properties: {
                       id: { type: 'string' },
                       name: { type: 'string' },
+                    },
+                  },
+                  rentEntry: {
+                    type: ['object', 'null'],
+                    properties: {
+                      id: { type: 'string' },
+                      date: { type: 'string', format: 'date-time' },
+                      amount: { type: 'number' },
+                      type: { type: 'string', enum: ['RENT', 'PAYMENT'] },
+                      remarks: { type: 'string' },
+                      createdBy: { type: ['string', 'null'] },
+                      voucherId: { type: ['string', 'null'] },
+                      createdAt: { type: 'string', format: 'date-time' },
+                      updatedAt: { type: 'string', format: 'date-time' },
                     },
                   },
                 },
@@ -170,6 +185,7 @@ export const listOptions = {
                 date: { type: ['string', 'null'], format: 'date-time' },
                 remarks: { type: 'string' },
                 currentStockAtThatTime: { type: 'number' },
+                storeCharge: { type: ['number', 'null'] },
                 varieties: {
                   type: 'array',
                   items: {
@@ -223,6 +239,20 @@ export const listOptions = {
                   properties: {
                     id: { type: 'string' },
                     name: { type: 'string' },
+                  },
+                },
+                rentEntry: {
+                  type: ['object', 'null'],
+                  properties: {
+                    id: { type: 'string' },
+                    date: { type: 'string', format: 'date-time' },
+                    amount: { type: 'number' },
+                    type: { type: 'string', enum: ['RENT', 'PAYMENT'] },
+                    remarks: { type: 'string' },
+                    createdBy: { type: ['string', 'null'] },
+                    voucherId: { type: ['string', 'null'] },
+                    createdAt: { type: 'string', format: 'date-time' },
+                    updatedAt: { type: 'string', format: 'date-time' },
                   },
                 },
               },
@@ -285,6 +315,7 @@ export const getByFarmerOptions = {
                 date: { type: ['string', 'null'], format: 'date-time' },
                 remarks: { type: ['string', 'null'] },
                 currentStockAtThatTime: { type: ['number', 'null'] },
+                storeCharge: { type: ['number', 'null'] },
                 varieties: {
                   type: 'array',
                   items: {
@@ -336,6 +367,20 @@ export const getByFarmerOptions = {
                     name: { type: 'string' },
                   },
                 },
+                rentEntry: {
+                  type: ['object', 'null'],
+                  properties: {
+                    id: { type: 'string' },
+                    date: { type: 'string', format: 'date-time' },
+                    amount: { type: 'number' },
+                    type: { type: 'string', enum: ['RENT', 'PAYMENT'] },
+                    remarks: { type: 'string' },
+                    createdBy: { type: ['string', 'null'] },
+                    voucherId: { type: ['string', 'null'] },
+                    createdAt: { type: 'string', format: 'date-time' },
+                    updatedAt: { type: 'string', format: 'date-time' },
+                  },
+                },
               },
             },
           },
@@ -379,7 +424,7 @@ export const getByIdOptions = {
               date: { type: ['string', 'null'], format: 'date-time' },
               remarks: { type: ['string', 'null'] },
               currentStockAtThatTime: { type: ['number', 'null'] },
-
+              storeCharge: { type: ['number', 'null'] },
               varieties: {
                 type: 'array',
                 items: {
@@ -435,6 +480,20 @@ export const getByIdOptions = {
                 properties: {
                   id: { type: 'string' },
                   name: { type: 'string' },
+                },
+              },
+              rentEntry: {
+                type: ['object', 'null'],
+                properties: {
+                  id: { type: 'string' },
+                  date: { type: 'string', format: 'date-time' },
+                  amount: { type: 'number' },
+                  type: { type: 'string', enum: ['RENT', 'PAYMENT'] },
+                  remarks: { type: 'string' },
+                  createdBy: { type: ['string', 'null'] },
+                  voucherId: { type: ['string', 'null'] },
+                  createdAt: { type: 'string', format: 'date-time' },
+                  updatedAt: { type: 'string', format: 'date-time' },
                 },
               },
             },
@@ -498,6 +557,7 @@ export const updateOptions = {
                   date: { type: ['string', 'null'], format: 'date-time' },
                   remarks: { type: ['string', 'null'] },
                   currentStockAtThatTime: { type: ['number', 'null'] },
+                  storeCharge: { type: ['number', 'null'] },
                   varieties: {
                     type: 'array',
                     items: {
@@ -548,6 +608,20 @@ export const updateOptions = {
                     properties: {
                       id: { type: 'string' },
                       name: { type: 'string' },
+                    },
+                  },
+                  rentEntry: {
+                    type: ['object', 'null'],
+                    properties: {
+                      id: { type: 'string' },
+                      date: { type: 'string', format: 'date-time' },
+                      amount: { type: 'number' },
+                      type: { type: 'string', enum: ['RENT', 'PAYMENT'] },
+                      remarks: { type: 'string' },
+                      createdBy: { type: ['string', 'null'] },
+                      voucherId: { type: ['string', 'null'] },
+                      createdAt: { type: 'string', format: 'date-time' },
+                      updatedAt: { type: 'string', format: 'date-time' },
                     },
                   },
                 },

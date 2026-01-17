@@ -38,3 +38,6 @@ generated/
 
 # Husky
 .husky/_
+
+# .Md
+CONTEXT.md

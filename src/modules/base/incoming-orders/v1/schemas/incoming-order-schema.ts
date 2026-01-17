@@ -45,6 +45,7 @@ export const createIncomingOrderSchema = z.object({
   date: z.coerce.date().optional(),
   remarks: z.string().nullable().optional(),
   currentStockAtThatTime: z.coerce.number().min(0, 'Current stock must be non-negative').optional(),
+  storeCharge: z.coerce.number().min(0, 'Store charge must be non-negative').optional(),
   varieties: z
     .union([
       z.array(varietySchema).min(1, 'Varieties array must be non-empty if provided'), // Non-empty array
@@ -69,6 +70,7 @@ export const updateIncomingOrderSchema = z.object({
   date: z.coerce.date().optional(),
   remarks: z.string().nullable().optional(),
   currentStockAtThatTime: z.coerce.number().min(0, 'Current stock must be non-negative').optional(),
+  storeCharge: z.coerce.number().min(0, 'Store charge must be non-negative').optional(),
   varieties: z.array(varietySchema).optional(),
 });
 

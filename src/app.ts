@@ -13,6 +13,7 @@ import rbacRoutes from './modules/base/rbac/v1/routes/rbac.routes.js';
 import incomingOrderRoutes from './modules/base/incoming-orders/v1/routes/incoming-orders.routes.js';
 import outgoingOrderRoutes from './modules/base/outgoing-orders/v1/index.js';
 import preferencesRoutes from './modules/base/preferences/v1/index.js';
+import paymentHistoryRoutes from './modules/base/payment-history/v1/index.js';
 config();
 
 export const buildApp = async (): Promise<FastifyInstance> => {
@@ -76,6 +77,7 @@ export const buildApp = async (): Promise<FastifyInstance> => {
   await fastify.register(incomingOrderRoutes, { prefix: '/api/v1/base/incoming-orders' });
   await fastify.register(outgoingOrderRoutes, { prefix: '/api/v1/base/outgoing-orders' });
   await fastify.register(preferencesRoutes, { prefix: '/api/v1/base/preferences' });
+  await fastify.register(paymentHistoryRoutes, { prefix: '/api/v1/base/payment-history' });
 
   // Health check endpoint
   fastify.get('/health', () => ({

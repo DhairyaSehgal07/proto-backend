@@ -48,6 +48,11 @@ enum Commodity {
   OTHER
 }
 
+enum PaymentType {
+  RENT
+  PAYMENT
+}
+
 // -------------------- MODELS --------------------
 
 model Subscription {
@@ -207,6 +212,7 @@ model FarmerStorageLink {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+paymentHistory FarmerPaymentHistory[]
   incomingOrders IncomingOrder[]
   outgoingOrders OutgoingOrder[]
 
@@ -251,7 +257,8 @@ model IncomingOrder {
   gatePassNumber         Int
   remarks                String?
   currentStockAtThatTime Float?
-  varieties              Variety[] // Can be empty array for null vouchers (paper tampering simulation)
+  varieties              Variety[]
+  storeCharge    Float?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -396,4 +403,22 @@ model LoginAudit {
   @@index([mobileNumber])
   @@index([createdAt])
   @@index([success])
+}
+
+// Finances
+model FarmerPaymentHistory {
+  id                 String   @id @default(auto()) @map("_id") @db.ObjectId
+  farmerStorageLinkId String   @db.ObjectId
+  farmerStorageLink   FarmerStorageLink @relation(fields: [farmerStorageLinkId], references: [id], onDelete: NoAction)
+  date                DateTime
+  amount              Float
+  type                PaymentType
+  remarks             String
+  createdBy           String?   @db.ObjectId
+  voucherId           String?   @db.ObjectId
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([farmerStorageLinkId])
+  @@index([type])
 }
