@@ -144,8 +144,8 @@ export class PaymentHistoryService {
     let createdBy: string | null = data.createdBy ?? null;
     if (request && !createdBy) {
       const user = request.user as JWTPayload | undefined;
-      if (user?.id) {
-        createdBy = user.id;
+      if (user?.adminId) {
+        createdBy = user.adminId;
       }
     }
 

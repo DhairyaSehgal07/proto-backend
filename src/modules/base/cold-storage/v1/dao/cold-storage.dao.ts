@@ -1,6 +1,10 @@
 import type { FastifyInstance } from 'fastify';
 import { Prisma, type Prisma as PrismaTypes } from '../../../../../../generated/prisma/client.js';
-import type { CreateColdStorageRequest, UpdateColdStorageRequest } from '../types/cold-storage.js';
+import type {
+  CreateColdStorageRequest,
+  UpdateColdStorageRequest,
+  Preferences,
+} from '../types/cold-storage.js';
 
 /**
  * Type for ColdStorage with preferences relation included
@@ -83,7 +87,7 @@ export class ColdStorageDAO {
   async create(data: CreateColdStorageRequest): Promise<ColdStorageWithPreferences> {
     try {
       // Always create preferences with default values if not provided
-      const preferencesData = data.preferences || {};
+      const preferencesData: Preferences | null = data.preferences || null;
 
       return await this.fastify.prisma.coldStorage.create({
         data: {
@@ -97,15 +101,15 @@ export class ColdStorageDAO {
           plan: data.plan ?? 'Basic',
           preferences: {
             create: {
-              commodities: preferencesData.commodities ?? [],
-              generation: preferencesData.generation ?? null,
-              rouging: preferencesData.rouging ?? null,
-              tuberType: preferencesData.tuberType ?? null,
-              grader: preferencesData.grader ?? null,
-              incoming: preferencesData.incoming ?? {
+              commodities: preferencesData?.commodities ?? [],
+              generation: preferencesData?.generation ?? null,
+              rouging: preferencesData?.rouging ?? null,
+              tuberType: preferencesData?.tuberType ?? null,
+              grader: preferencesData?.grader ?? null,
+              incoming: preferencesData?.incoming ?? {
                 showCustomMarka: false,
               },
-              customFields: preferencesData.customFields ?? null,
+              customFields: preferencesData?.customFields ?? null,
             },
           },
         },
