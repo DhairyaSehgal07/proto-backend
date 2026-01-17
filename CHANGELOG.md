@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.6.0](https://github.com/DhairyaSehgal07/proto-backend/compare/v0.5.2...v0.6.0) (2026-01-17)
+
+### ### Fixed
+
+- remove top-level varieties field from Preferences in cold-storage module ([ebe3b5c](https://github.com/DhairyaSehgal07/proto-backend/commit/ebe3b5c6f14411ce7059084933eeaade57aaf08d))
+
+### ### Changed
+
+- update pnpm-lock.yaml to sync with package.json ([36cafd0](https://github.com/DhairyaSehgal07/proto-backend/commit/36cafd043468dcefca5c4932f1cc579a6f9f77e7))
+- update preferences and store-admin modules ([abcb26e](https://github.com/DhairyaSehgal07/proto-backend/commit/abcb26e9c2cac0b6e5b57142f5f93ef8d8a66089))
+- update routes, schemas, and services across multiple modules ([fdaacb3](https://github.com/DhairyaSehgal07/proto-backend/commit/fdaacb341f47143c0347c452cd3b6d732f2f325f))
+
 ### [0.5.2](https://github.com/DhairyaSehgal07/proto-backend/compare/v0.5.1...v0.5.2) (2025-12-22)
 
 ### ### Fixed
