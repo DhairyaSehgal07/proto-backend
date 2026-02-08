@@ -252,7 +252,7 @@ model IncomingOrder {
   date DateTime?
   createdById  String?     @db.ObjectId
   createdBy    StoreAdmin? @relation("CreatedIncomingByAdmin", fields: [createdById], references: [id], onDelete: NoAction)
-  commodity              Commodity
+  commodity              String   // Free string: POTATO, FRUIT, OTHER, or any custom name (enum-free)
   gatePassType           GatePassType @default(RECEIPT)
   gatePassNumber         Int
   remarks                String?
@@ -294,7 +294,7 @@ model OutgoingOrder {
   farmerStorageLinkId String            @db.ObjectId
   farmerStorageLink   FarmerStorageLink @relation(fields: [farmerStorageLinkId], references: [id], onDelete: NoAction)
 
-  commodity              Commodity
+  commodity              String   // Free string: POTATO, FRUIT, OTHER, or any custom name (enum-free)
   gatePassType           GatePassType @default(DELIVERY)
   gatePassNumber         Int
   remarks                String?

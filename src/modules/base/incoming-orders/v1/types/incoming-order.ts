@@ -1,4 +1,4 @@
-import type { Commodity, GatePassType } from '../../../../../../generated/prisma/client.js';
+import type { GatePassType } from '../../../../../../generated/prisma/client.js';
 
 /**
  * BagSize type for incoming orders
@@ -47,7 +47,7 @@ export interface ProcessedVariety {
  */
 export interface CreateIncomingOrderRequest {
   farmerStorageLinkId: string;
-  commodity: Commodity;
+  commodity: string;
   gatePassNumber: number;
   gatePassType?: GatePassType;
   date?: Date;
@@ -62,7 +62,7 @@ export interface CreateIncomingOrderRequest {
  */
 export interface UpdateIncomingOrderRequest {
   farmerStorageLinkId?: string;
-  commodity?: Commodity;
+  commodity?: string;
   gatePassNumber?: number;
   gatePassType?: GatePassType;
   date?: Date;
@@ -79,7 +79,7 @@ export interface IncomingOrderResponse {
   id: string;
   farmerStorageLinkId: string;
   coldStorageId: string | null;
-  commodity: Commodity;
+  commodity: string;
   gatePassType: GatePassType;
   gatePassNumber: number;
   date: Date | null;

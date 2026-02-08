@@ -87,14 +87,25 @@ export const buildApp = async (): Promise<FastifyInstance> => {
   }));
 
   // Global error handler
-  fastify.setErrorHandler((error: Error, request, reply) => {
-    fastify.log.error(error, 'Unhandled error');
-    void reply.code(500).send({
+  fastify.setErrorHandler((error, request, reply) => {
+    if ((error as any).validation) {
+      reply.code(400).send({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: error.message,
+          details: (error as any).validation,
+        },
+      });
+      return;
+    }
+
+    request.log.error(error);
+    reply.code(500).send({
       success: false,
       error: {
         code: 'INTERNAL_SERVER_ERROR',
-        message:
-          process.env.NODE_ENV === 'development' ? error.message : 'An unexpected error occurred',
+        message: 'Something went wrong',
       },
     });
   });

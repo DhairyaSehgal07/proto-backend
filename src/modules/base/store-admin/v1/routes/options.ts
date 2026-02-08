@@ -820,13 +820,13 @@ export const getGatePassNumberOptions = {
       properties: {
         commodity: {
           type: 'string',
-          enum: ['POTATO', 'ONION', 'GARLIC', 'TOMATO', 'CARROT', 'APPLE', 'SWEETS', 'OTHER'],
-          description: 'Commodity type to get the next gate pass number for',
+          description:
+            'Original commodity provided by client (unknown values mapped internally to OTHER)',
         },
         type: {
           type: 'string',
           enum: ['incoming', 'outgoing'],
-          description: 'Order type - determines which model to query (incoming or outgoing orders)',
+          description: 'Order type',
         },
       },
       required: ['commodity', 'type'],

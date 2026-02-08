@@ -1,5 +1,4 @@
 import type { FastifyInstance } from 'fastify';
-import { Commodity } from '../../../../../../generated/prisma/client.js';
 
 /**
  * Get the latest order's currentStockAtThatTime value for a given commodity
@@ -7,13 +6,13 @@ import { Commodity } from '../../../../../../generated/prisma/client.js';
  *
  * @param fastify - Fastify instance to access prisma
  * @param coldStorageId - ID of the cold storage
- * @param commodity - Commodity type
+ * @param commodity - Commodity name (free string, e.g. POTATO, FRUIT, OTHER)
  * @returns Latest current stock value, or 0 if no orders exist
  */
 export const getLatestOrderCurrentStock = async (
   fastify: FastifyInstance,
   coldStorageId: string,
-  commodity: Commodity
+  commodity: string
 ): Promise<number> => {
   try {
     // Get the latest incoming order for this commodity
@@ -138,7 +137,7 @@ export const quantitiesChanged = (
  *
  * @param fastify - Fastify instance to access prisma
  * @param coldStorageId - ID of the cold storage
- * @param commodity - Commodity type
+ * @param commodity - Commodity name (free string)
  * @param orderCreatedAt - Creation time of the order
  * @param excludeOrderId - Order ID to exclude
  * @returns Stock value before the specified order
@@ -146,7 +145,7 @@ export const quantitiesChanged = (
 export const getStockBeforeOrder = async (
   fastify: FastifyInstance,
   coldStorageId: string,
-  commodity: Commodity,
+  commodity: string,
   orderCreatedAt: Date,
   excludeOrderId?: string
 ): Promise<number> => {
@@ -213,7 +212,7 @@ export const getStockBeforeOrder = async (
  *
  * @param fastify - Fastify instance to access prisma
  * @param coldStorageId - ID of the cold storage
- * @param commodity - Commodity type
+ * @param commodity - Commodity name (free string)
  * @param orderCreatedAt - Creation time of the order being updated/deleted
  * @param excludeOrderId - Order ID to exclude from recalculation (the one being updated/deleted)
  * @param baseStock - Optional base stock to start from (for updates, this should be the updated order's currentStockAtThatTime)
@@ -221,7 +220,7 @@ export const getStockBeforeOrder = async (
 export const recalculateStockAfterOrder = async (
   fastify: FastifyInstance,
   coldStorageId: string,
-  commodity: Commodity,
+  commodity: string,
   orderCreatedAt: Date,
   excludeOrderId?: string,
   baseStock?: number
