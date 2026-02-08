@@ -522,15 +522,19 @@ export class StoreAdminController {
         return;
       }
 
+      // Use original commodity so we get next number for the same bucket stored on the order (avoids duplicate)
       const result = await this.service.getNextGatePassNumber(
         request.admin.coldStorageId,
-        commodity,
+        commodity.original,
         type
       );
 
       reply.code(200).send({
         success: true,
-        data: result,
+        data: {
+          ...result,
+          commodity: commodity.original,
+        },
       });
     } catch (error) {
       this.handleError(error, reply);

@@ -7,7 +7,7 @@ import type {
   VarietySnapshotInput,
   BagSizeSnapshotInput,
 } from '../types/outgoing-order.js';
-import { Commodity, type Prisma } from '../../../../../../generated/prisma/client.js';
+import type { Prisma } from '../../../../../../generated/prisma/client.js';
 import {
   getLatestOrderCurrentStock,
   calculateQuantityRemovedFromVarieties,
@@ -1304,7 +1304,7 @@ export class OutgoingOrderService {
     id: string;
     farmerStorageLinkId: string;
     coldStorageId: string | null;
-    commodity: Commodity;
+    commodity: string;
     gatePassType: string;
     gatePassNumber: number;
     date: Date | null;
@@ -1389,7 +1389,7 @@ export class OutgoingOrderService {
     id: string;
     farmerStorageLinkId: string;
     coldStorageId: string | null;
-    commodity: Commodity;
+    commodity: string;
     gatePassType: string;
     gatePassNumber: number;
     date: Date | null;

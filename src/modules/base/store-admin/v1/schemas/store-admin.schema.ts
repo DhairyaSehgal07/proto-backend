@@ -104,13 +104,35 @@ export const daybookQuerySchema = z.object({
 /**
  * GATE PASS NUMBER QUERY schema — for getting next gate pass number
  */
+
 export const gatePassNumberQuerySchema = z.object({
-  commodity: z
-    .enum(['POTATO', 'ONION', 'GARLIC', 'TOMATO', 'CARROT', 'APPLE', 'SWEETS', 'OTHER'])
-    .describe('Commodity type to get the next gate pass number for'),
-  type: z
-    .enum(['incoming', 'outgoing'])
-    .describe('Order type - determines which model to query (incoming or outgoing orders)'),
+  commodity: z.preprocess(
+    (val) => {
+      if (typeof val !== 'string') return val;
+
+      const normalized = val.toUpperCase();
+      const allowed = ['POTATO', 'ONION', 'GARLIC', 'TOMATO', 'CARROT', 'APPLE', 'SWEETS', 'OTHER'];
+
+      return {
+        original: normalized,
+        normalized: allowed.includes(normalized) ? normalized : 'OTHER',
+      };
+    },
+    z.object({
+      original: z.string(),
+      normalized: z.enum([
+        'POTATO',
+        'ONION',
+        'GARLIC',
+        'TOMATO',
+        'CARROT',
+        'APPLE',
+        'SWEETS',
+        'OTHER',
+      ]),
+    })
+  ),
+  type: z.enum(['incoming', 'outgoing']),
 });
 
 /**

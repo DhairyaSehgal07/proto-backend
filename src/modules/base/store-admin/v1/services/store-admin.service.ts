@@ -1629,12 +1629,12 @@ export class StoreAdminService {
   }
 
   /**
-   * Get the next gate pass number for a given cold storage and commodity
-   * Queries either incoming or outgoing orders based on the type parameter
+   * Get the next gate pass number for a given cold storage and commodity.
+   * Uses the same commodity string that will be stored on the order.
    */
   async getNextGatePassNumber(
     coldStorageId: string,
-    commodity: Commodity,
+    commodity: string,
     type: 'incoming' | 'outgoing'
   ): Promise<GatePassNumberResponse> {
     const nextGatePassNumber = await getNextGatePassNumber(

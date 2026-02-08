@@ -1,10 +1,10 @@
 import { z } from 'zod';
-import { Commodity, GatePassType } from '../../../../../../generated/prisma/client.js';
+import { GatePassType } from '../../../../../../generated/prisma/client.js';
 
 /**
- * Commodity enum schema
+ * Commodity: free string (enum-free), e.g. POTATO, FRUIT, OTHER, or any custom name
  */
-export const commodityEnum = z.nativeEnum(Commodity);
+export const commoditySchema = z.string().min(1, 'Commodity is required');
 
 /**
  * GatePassType enum schema
@@ -39,7 +39,7 @@ export const varietySchema = z.object({
  */
 export const createIncomingOrderSchema = z.object({
   farmerStorageLinkId: z.string().length(24, 'Invalid MongoDB ObjectId'),
-  commodity: commodityEnum,
+  commodity: commoditySchema,
   gatePassNumber: z.coerce.number().int().positive('Gate pass number must be a positive integer'),
   gatePassType: gatePassTypeEnum.optional().default(GatePassType.RECEIPT),
   date: z.coerce.date().optional(),
@@ -60,7 +60,7 @@ export const createIncomingOrderSchema = z.object({
  */
 export const updateIncomingOrderSchema = z.object({
   farmerStorageLinkId: z.string().length(24, 'Invalid MongoDB ObjectId').optional(),
-  commodity: commodityEnum.optional(),
+  commodity: commoditySchema.optional(),
   gatePassNumber: z.coerce
     .number()
     .int()
@@ -85,7 +85,7 @@ export const incomingOrderIdParamSchema = z.object({
  * QUERY schema — for listing, search, filters (cold storage orders)
  */
 export const incomingOrderQuerySchema = z.object({
-  commodity: commodityEnum.optional(),
+  commodity: commoditySchema.optional(),
   gatePassType: gatePassTypeEnum.optional(),
   search: z.string().optional(), // Search by gate pass number
   page: z.coerce.number().min(1).optional().default(1),
@@ -97,7 +97,7 @@ export const incomingOrderQuerySchema = z.object({
  */
 export const incomingOrderFarmerQuerySchema = z.object({
   farmerStorageLinkId: z.string().length(24, 'Invalid MongoDB ObjectId'),
-  commodity: commodityEnum.optional(),
+  commodity: commoditySchema.optional(),
   page: z.coerce.number().min(1).optional().default(1),
   limit: z.coerce.number().min(1).max(100).optional().default(10),
 });
