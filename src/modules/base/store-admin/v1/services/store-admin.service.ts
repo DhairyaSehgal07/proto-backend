@@ -2356,6 +2356,14 @@ export class StoreAdminService {
         }>;
       }>;
     }>;
+    farmerSummary: Array<{
+      farmerStorageLinkId: string;
+      farmerName: string;
+      totalIncomingOrders: number;
+      totalOutgoingOrders: number;
+      rentPaid: number;
+      rentDue: number;
+    }>;
   }> {
     const { coldStorageId, dateFrom, dateTo, commodity, farmerId, locationId } = options;
 
@@ -2394,7 +2402,7 @@ export class StoreAdminService {
       ...(dateOrFilter && { OR: [...dateOrFilter] as Prisma.OutgoingOrderWhereInput['OR'] }),
     };
 
-    // Fetch all incoming orders with required fields
+    // Fetch all incoming orders with required fields (include storeCharge for farmer rent due)
     const incomingOrders = await this.fastify.prisma.incomingOrder.findMany({
       where: incomingWhere,
       select: {
@@ -2403,6 +2411,7 @@ export class StoreAdminService {
         createdAt: true,
         commodity: true,
         farmerStorageLinkId: true,
+        storeCharge: true,
         varieties: true,
         farmerStorageLink: {
           select: {
@@ -2756,6 +2765,60 @@ export class StoreAdminService {
       };
     });
 
+    // 5. Farmer summary: serial number, farmer name, total incoming orders, total outgoing, rent paid, rent due
+    const farmerLinkIds = new Set<string>();
+    incomingOrders.forEach((o) => farmerLinkIds.add(o.farmerStorageLinkId));
+    outgoingOrders.forEach((o) => farmerLinkIds.add(o.farmerStorageLinkId));
+    const linkIdsArray = Array.from(farmerLinkIds);
+    const links = await this.fastify.prisma.farmerStorageLink.findMany({
+      where:
+        linkIdsArray.length > 0 ? { coldStorageId, id: { in: linkIdsArray } } : { coldStorageId },
+      include: {
+        farmer: { select: { id: true, name: true } },
+        paymentHistory: true,
+      },
+    });
+
+    const incomingCountByLink = new Map<string, number>();
+    const rentDueByLink = new Map<string, number>();
+    incomingOrders.forEach((o) => {
+      incomingCountByLink.set(
+        o.farmerStorageLinkId,
+        (incomingCountByLink.get(o.farmerStorageLinkId) ?? 0) + 1
+      );
+      const charge = (o as { storeCharge?: number | null }).storeCharge ?? 0;
+      if (charge > 0)
+        rentDueByLink.set(
+          o.farmerStorageLinkId,
+          (rentDueByLink.get(o.farmerStorageLinkId) ?? 0) + charge
+        );
+    });
+    const outgoingCountByLink = new Map<string, number>();
+    outgoingOrders.forEach((o) => {
+      outgoingCountByLink.set(
+        o.farmerStorageLinkId,
+        (outgoingCountByLink.get(o.farmerStorageLinkId) ?? 0) + 1
+      );
+    });
+
+    const STORE_CHARGE_REMARKS = 'Store charge for incoming order';
+    const farmerSummary = links
+      .map((link) => {
+        const rentPaid = link.paymentHistory
+          .filter((p) => p.type === 'RENT' && !(p.remarks ?? '').includes(STORE_CHARGE_REMARKS))
+          .reduce((sum, p) => sum + p.amount, 0);
+        const rentDue = rentDueByLink.get(link.id) ?? 0;
+        return {
+          farmerStorageLinkId: link.id,
+          farmerName: link.farmer.name,
+          totalIncomingOrders: incomingCountByLink.get(link.id) ?? 0,
+          totalOutgoingOrders: outgoingCountByLink.get(link.id) ?? 0,
+          rentPaid,
+          rentDue,
+        };
+      })
+      .sort((a, b) => a.farmerName.localeCompare(b.farmerName));
+
     return {
       meta: {
         coldStorageId,
@@ -2771,6 +2834,7 @@ export class StoreAdminService {
       commoditySummary,
       stockTrend,
       locationAnalytics,
+      farmerSummary,
     };
   }
 
