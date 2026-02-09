@@ -54,6 +54,10 @@ export const createOutgoingOrderSchema = z.object({
   remarks: z.string().optional().nullable(),
   currentStockAtThatTime: z.coerce.number().min(0, 'Current stock must be non-negative').optional(),
   varieties: z.array(varietySnapshotSchema).optional(),
+  /** true = paid (opens Add Payment after create), false = credit */
+  isPaid: z.boolean().optional(),
+  /** Amount paid at voucher time (when isPaid); stored on voucher, pre-fills Add Payment */
+  paidAmount: z.coerce.number().min(0, 'paidAmount must be non-negative').optional(),
 });
 
 /**
