@@ -283,9 +283,10 @@ type BagSize {
   name         String
   quantityInit Float
   quantityCurr Float
-  customMarka String?
+  customMarka  String?
   approxWeight Float?
-  locationId   String @db.ObjectId
+  locationId   String  @db.ObjectId
+  pricePerBag  Float?  // Price per bag (₹) for this size; total stored as storeCharge on order
 }
 
 // 📤 Outgoing Order

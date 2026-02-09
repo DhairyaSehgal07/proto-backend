@@ -12,6 +12,7 @@ export interface BagSizeInput {
   floor: string;
   row: string;
   chamber: string;
+  pricePerBag?: number;
 }
 
 /**
@@ -24,6 +25,7 @@ export interface ProcessedBagSize {
   approxWeight?: number;
   customMarka?: string;
   locationId: string;
+  pricePerBag?: number;
 }
 
 /**
