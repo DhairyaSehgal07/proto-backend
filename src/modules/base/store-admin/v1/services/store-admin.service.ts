@@ -1368,6 +1368,7 @@ export class StoreAdminService {
               gatePassNumber: incomingOrder.gatePassNumber,
               remarks: incomingOrder.remarks,
               currentStockAtThatTime: incomingOrder.currentStockAtThatTime,
+              storeCharge: (incomingOrder as { storeCharge?: number }).storeCharge ?? undefined,
               createdAt: incomingOrder.createdAt,
               updatedAt: incomingOrder.updatedAt,
               farmerStorageLink: incomingOrder.farmerStorageLink
@@ -1539,6 +1540,20 @@ export class StoreAdminService {
       },
     });
 
+    // Sum storeCharge (total rent from incoming orders) per farmerStorageLinkId
+    const incomingForRent = await this.fastify.prisma.incomingOrder.findMany({
+      where: { coldStorageId },
+      select: { farmerStorageLinkId: true, storeCharge: true },
+    });
+    const totalRentByLink = new Map<string, number>();
+    for (const order of incomingForRent) {
+      const amount = order.storeCharge ?? 0;
+      if (amount > 0) {
+        const current = totalRentByLink.get(order.farmerStorageLinkId) ?? 0;
+        totalRentByLink.set(order.farmerStorageLinkId, current + amount);
+      }
+    }
+
     // Map to response format
     const data: FarmerResponse[] = links.map((link) => ({
       id: link.id,
@@ -1559,6 +1574,7 @@ export class StoreAdminService {
         createdAt: payment.createdAt,
         updatedAt: payment.updatedAt,
       })),
+      totalRentFromOrders: totalRentByLink.get(link.id) ?? 0,
     }));
 
     return { data };
@@ -1843,6 +1859,7 @@ export class StoreAdminService {
             gatePassNumber: true,
             remarks: true,
             currentStockAtThatTime: true,
+            storeCharge: true,
             varieties: true,
             date: true,
             createdAt: true,
@@ -1880,6 +1897,7 @@ export class StoreAdminService {
           gatePassNumber: order.gatePassNumber,
           remarks: order.remarks,
           currentStockAtThatTime: order.currentStockAtThatTime,
+          storeCharge: order.storeCharge ?? undefined,
           createdAt: order.createdAt,
           updatedAt: order.updatedAt,
           farmerStorageLink: order.farmerStorageLink
@@ -2029,6 +2047,7 @@ export class StoreAdminService {
               gatePassNumber: true,
               remarks: true,
               currentStockAtThatTime: true,
+              storeCharge: true,
               varieties: true,
               date: true,
               createdAt: true,
@@ -2144,6 +2163,7 @@ export class StoreAdminService {
               gatePassNumber: incomingOrder.gatePassNumber,
               remarks: incomingOrder.remarks,
               currentStockAtThatTime: incomingOrder.currentStockAtThatTime,
+              storeCharge: (incomingOrder as { storeCharge?: number }).storeCharge ?? undefined,
               createdAt: incomingOrder.createdAt,
               updatedAt: incomingOrder.updatedAt,
               farmerStorageLink: incomingOrder.farmerStorageLink
@@ -2185,6 +2205,7 @@ export class StoreAdminService {
                 gatePassNumber: incomingOrder.gatePassNumber,
                 remarks: incomingOrder.remarks,
                 currentStockAtThatTime: incomingOrder.currentStockAtThatTime,
+                storeCharge: (incomingOrder as { storeCharge?: number }).storeCharge ?? undefined,
                 createdAt: incomingOrder.createdAt,
                 updatedAt: incomingOrder.updatedAt,
                 farmerStorageLink: incomingOrder.farmerStorageLink

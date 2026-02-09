@@ -171,6 +171,8 @@ export interface DaybookOrderItem {
   gatePassNumber: number;
   remarks: string | null;
   currentStockAtThatTime: number | null;
+  /** Incoming only: store charge / rent for this voucher */
+  storeCharge?: number;
   createdAt: Date;
   updatedAt: Date;
   farmerStorageLink?: {
@@ -256,6 +258,8 @@ export interface FarmerResponse {
   accountNumber: number;
   isActive: boolean;
   paymentHistory: PaymentHistoryItem[];
+  /** Sum of storeCharge from all incoming orders for this farmer (total rent owed) */
+  totalRentFromOrders?: number;
 }
 
 /**
