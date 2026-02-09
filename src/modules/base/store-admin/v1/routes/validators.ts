@@ -1,5 +1,6 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { ZodError } from 'zod';
+import { formatZodError } from '../../../../../core/validation.js';
 import {
   createStoreAdminSchema,
   updateStoreAdminSchema,
@@ -27,15 +28,13 @@ export function createBodyValidator(
       request.body = validated;
     } catch (error) {
       if (error instanceof ZodError) {
+        const { message, details } = formatZodError(error);
         reply.code(400).send({
           success: false,
           error: {
             code: 'VALIDATION_ERROR',
-            message: 'Request validation failed',
-            details: error.issues.map((e) => ({
-              path: e.path.join('.'),
-              message: e.message,
-            })),
+            message,
+            details,
           },
         });
         return;
@@ -55,15 +54,13 @@ export function createLoginBodyValidator(schema: typeof loginStoreAdminSchema) {
       request.body = validated;
     } catch (error) {
       if (error instanceof ZodError) {
+        const { message, details } = formatZodError(error);
         reply.code(400).send({
           success: false,
           error: {
             code: 'VALIDATION_ERROR',
-            message: 'Request validation failed',
-            details: error.issues.map((e) => ({
-              path: e.path.join('.'),
-              message: e.message,
-            })),
+            message,
+            details,
           },
         });
         return;
@@ -83,15 +80,13 @@ export function createRegisterFarmerBodyValidator(schema: typeof registerFarmerS
       request.body = validated;
     } catch (error) {
       if (error instanceof ZodError) {
+        const { message, details } = formatZodError(error);
         reply.code(400).send({
           success: false,
           error: {
             code: 'VALIDATION_ERROR',
-            message: 'Request validation failed',
-            details: error.issues.map((e) => ({
-              path: e.path.join('.'),
-              message: e.message,
-            })),
+            message,
+            details,
           },
         });
         return;
@@ -115,15 +110,13 @@ export function validateParams(
     done();
   } catch (error) {
     if (error instanceof ZodError) {
+      const { message, details } = formatZodError(error);
       reply.code(400).send({
         success: false,
         error: {
           code: 'VALIDATION_ERROR',
-          message: 'Invalid route parameters',
-          details: error.issues.map((e) => ({
-            path: e.path.join('.'),
-            message: e.message,
-          })),
+          message,
+          details,
         },
       });
       return;
@@ -146,15 +139,13 @@ export function validateQuery(
     done();
   } catch (error) {
     if (error instanceof ZodError) {
+      const { message, details } = formatZodError(error);
       reply.code(400).send({
         success: false,
         error: {
           code: 'VALIDATION_ERROR',
-          message: 'Invalid query parameters',
-          details: error.issues.map((e) => ({
-            path: e.path.join('.'),
-            message: e.message,
-          })),
+          message,
+          details,
         },
       });
       return;
@@ -177,15 +168,13 @@ export function validateDaybookQuery(
     done();
   } catch (error) {
     if (error instanceof ZodError) {
+      const { message, details } = formatZodError(error);
       reply.code(400).send({
         success: false,
         error: {
           code: 'VALIDATION_ERROR',
-          message: 'Invalid query parameters',
-          details: error.issues.map((e) => ({
-            path: e.path.join('.'),
-            message: e.message,
-          })),
+          message,
+          details,
         },
       });
       return;
@@ -208,15 +197,13 @@ export function validateGatePassNumberQuery(
     done();
   } catch (error) {
     if (error instanceof ZodError) {
+      const { message, details } = formatZodError(error);
       reply.code(400).send({
         success: false,
         error: {
           code: 'VALIDATION_ERROR',
-          message: 'Invalid query parameters',
-          details: error.issues.map((e) => ({
-            path: e.path.join('.'),
-            message: e.message,
-          })),
+          message,
+          details,
         },
       });
       return;
@@ -239,15 +226,13 @@ export function validateFarmerOrdersQuery(
     done();
   } catch (error) {
     if (error instanceof ZodError) {
+      const { message, details } = formatZodError(error);
       reply.code(400).send({
         success: false,
         error: {
           code: 'VALIDATION_ERROR',
-          message: 'Invalid query parameters',
-          details: error.issues.map((e) => ({
-            path: e.path.join('.'),
-            message: e.message,
-          })),
+          message,
+          details,
         },
       });
       return;
@@ -270,15 +255,13 @@ export function validateFarmerStorageLinkIdParam(
     done();
   } catch (error) {
     if (error instanceof ZodError) {
+      const { message, details } = formatZodError(error);
       reply.code(400).send({
         success: false,
         error: {
           code: 'VALIDATION_ERROR',
-          message: 'Invalid route parameters',
-          details: error.issues.map((e) => ({
-            path: e.path.join('.'),
-            message: e.message,
-          })),
+          message,
+          details,
         },
       });
       return;
@@ -301,15 +284,13 @@ export function validateColdStorageAnalyticsQuery(
     done();
   } catch (error) {
     if (error instanceof ZodError) {
+      const { message, details } = formatZodError(error);
       reply.code(400).send({
         success: false,
         error: {
           code: 'VALIDATION_ERROR',
-          message: 'Invalid query parameters',
-          details: error.issues.map((e) => ({
-            path: e.path.join('.'),
-            message: e.message,
-          })),
+          message,
+          details,
         },
       });
       return;
@@ -332,15 +313,13 @@ export function validateVarietyInventoryAnalysisQuery(
     done();
   } catch (error) {
     if (error instanceof ZodError) {
+      const { message, details } = formatZodError(error);
       reply.code(400).send({
         success: false,
         error: {
           code: 'VALIDATION_ERROR',
-          message: 'Invalid query parameters',
-          details: error.issues.map((e) => ({
-            path: e.path.join('.'),
-            message: e.message,
-          })),
+          message,
+          details,
         },
       });
       return;

@@ -1,5 +1,6 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { ZodError } from 'zod';
+import { formatZodError } from '../../../../../core/validation.js';
 import {
   createOrUpdateRolePermissionSchema,
   roleParamSchema,
@@ -16,15 +17,13 @@ export function createBodyValidator(schema: typeof createOrUpdateRolePermissionS
       request.body = validated;
     } catch (error) {
       if (error instanceof ZodError) {
+        const { message, details } = formatZodError(error);
         reply.code(400).send({
           success: false,
           error: {
             code: 'VALIDATION_ERROR',
-            message: 'Request validation failed',
-            details: error.issues.map((e) => ({
-              path: e.path.join('.'),
-              message: e.message,
-            })),
+            message,
+            details,
           },
         });
         return;
@@ -60,15 +59,13 @@ export function validateParams(
     done();
   } catch (error) {
     if (error instanceof ZodError) {
+      const { message, details } = formatZodError(error);
       reply.code(400).send({
         success: false,
         error: {
           code: 'VALIDATION_ERROR',
-          message: 'Invalid route parameters',
-          details: error.issues.map((e) => ({
-            path: e.path.join('.'),
-            message: e.message,
-          })),
+          message,
+          details,
         },
       });
       return;

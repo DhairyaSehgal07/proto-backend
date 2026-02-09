@@ -11,19 +11,29 @@ export const commoditySchema = z.string().min(1, 'Commodity is required');
  */
 export const gatePassTypeEnum = z.nativeEnum(GatePassType);
 
+/** User-friendly message when location (floor/row/chamber) is missing for a bag size */
+const LOCATION_REQUIRED_MSG =
+  'Location is required: please select Floor, Row and Chamber for each bag size';
+
+/** Coerce null/undefined to empty string so .min(1) yields a clear message instead of "Invalid type" */
+const locationString = z.preprocess(
+  (val) => (val === null || val === undefined ? '' : val),
+  z.string().min(1, LOCATION_REQUIRED_MSG)
+);
+
 /**
  * BagSize schema for incoming orders
  */
 export const bagSizeSchema = z.object({
   name: z.string().min(1, 'Bag size name is required'),
-  quantityInit: z.coerce.number().min(0, 'quantityInit must be non-negative'),
-  quantityCurr: z.coerce.number().min(0, 'quantityCurr must be non-negative'),
-  approxWeight: z.coerce.number().min(0, 'approxWeight must be non-negative').optional(),
+  quantityInit: z.coerce.number().min(0, 'Quantity must be non-negative'),
+  quantityCurr: z.coerce.number().min(0, 'Quantity must be non-negative'),
+  approxWeight: z.coerce.number().min(0, 'Approx weight must be non-negative').optional(),
   customMarka: z.string().optional(),
-  floor: z.string().min(1, 'Floor is required'),
-  row: z.string().min(1, 'Row is required'),
-  chamber: z.string().min(1, 'Chamber is required'),
-  pricePerBag: z.coerce.number().min(0, 'pricePerBag must be non-negative').optional(),
+  floor: locationString,
+  row: locationString,
+  chamber: locationString,
+  pricePerBag: z.coerce.number().min(0, 'Price per bag must be non-negative').optional(),
 });
 
 /**
@@ -31,15 +41,22 @@ export const bagSizeSchema = z.object({
  */
 export const varietySchema = z.object({
   name: z.string().min(1, 'Variety name is required'),
-  bagSizes: z.array(bagSizeSchema).min(1, 'Each variety must have at least one bag size'),
+  bagSizes: z
+    .array(bagSizeSchema)
+    .min(1, 'Each variety must have at least one bag size with quantity and location'),
 });
 
 /**
  * CREATE IncomingOrder schema
  * Note: varieties can be undefined, null, or empty array for null vouchers
  */
+const FARMER_REQUIRED_MSG = 'Farmer is required. Please select a farmer.';
+
 export const createIncomingOrderSchema = z.object({
-  farmerStorageLinkId: z.string().length(24, 'Invalid MongoDB ObjectId'),
+  farmerStorageLinkId: z.preprocess(
+    (val) => (val === null || val === undefined ? '' : val),
+    z.string().min(1, FARMER_REQUIRED_MSG).length(24, FARMER_REQUIRED_MSG)
+  ),
   commodity: commoditySchema,
   gatePassNumber: z.coerce.number().int().positive('Gate pass number must be a positive integer'),
   gatePassType: gatePassTypeEnum.optional().default(GatePassType.RECEIPT),
@@ -49,11 +66,11 @@ export const createIncomingOrderSchema = z.object({
   storeCharge: z.coerce.number().min(0, 'Store charge must be non-negative').optional(),
   varieties: z
     .union([
-      z.array(varietySchema).min(1, 'Varieties array must be non-empty if provided'), // Non-empty array
-      z.array(varietySchema).length(0), // Empty array for null vouchers
-      z.null(), // Null for null vouchers
+      z.array(varietySchema).min(1, 'Please add at least one variety with bag sizes and locations'),
+      z.array(varietySchema).length(0),
+      z.null(),
     ])
-    .optional(), // Undefined is also allowed
+    .optional(),
 });
 
 /**
