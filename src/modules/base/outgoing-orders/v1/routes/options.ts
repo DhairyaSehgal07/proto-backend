@@ -29,6 +29,7 @@ export const createOptions = {
                   date: { type: ['string', 'null'], format: 'date-time' },
                   remarks: { type: ['string', 'null'] },
                   currentStockAtThatTime: { type: ['number', 'null'] },
+                  paidAmount: { type: ['number', 'null'] },
                   varieties: {
                     type: 'array',
                     items: {

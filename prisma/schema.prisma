@@ -303,6 +303,9 @@ model OutgoingOrder {
    // ✅ New field for manual voucher date
   date DateTime?
 
+  // Amount paid at voucher time (when isPaid); stored on voucher, pre-fills Add Payment
+  paidAmount Float?
+
   varieties   VarietySnapshot[] // Can be empty array for null vouchers (paper tampering simulation)
   totalBags   Int?              @default(0)
   totalWeight Float?            @default(0)

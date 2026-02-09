@@ -37,6 +37,10 @@ export interface CreateOutgoingOrderRequest {
   remarks?: string;
   currentStockAtThatTime?: number;
   varieties?: VarietySnapshotInput[];
+  /** true = paid, false = credit */
+  isPaid?: boolean;
+  /** Amount paid at voucher time (when isPaid); stored on voucher */
+  paidAmount?: number;
 }
 
 /**

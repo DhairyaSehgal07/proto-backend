@@ -481,6 +481,7 @@ export class OutgoingOrderService {
         date: data.date || null,
         remarks: data.remarks || null,
         currentStockAtThatTime: finalCurrentStock,
+        paidAmount: data.paidAmount != null ? data.paidAmount : undefined,
         varieties: processedVarieties || [], // empty array for null vouchers
         totalBags: totalBags > 0 ? totalBags : undefined,
         totalWeight: totalWeight > 0 ? totalWeight : undefined,
