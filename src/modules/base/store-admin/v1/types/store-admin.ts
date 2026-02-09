@@ -191,6 +191,7 @@ export interface DaybookOrderItem {
       name: string;
       quantityInit: number;
       quantityCurr: number;
+      PricePerBag?: number;
       approxWeight?: number;
       customMarka?: string;
       locationId: string;

@@ -1103,6 +1103,7 @@ export const getFarmerOrdersOptions = {
                             floor: { type: 'string', nullable: true },
                             row: { type: 'string', nullable: true },
                             chamber: { type: 'string', nullable: true },
+                            pricePerBag: { type: 'number', nullable: true },
                           },
                         },
                       },

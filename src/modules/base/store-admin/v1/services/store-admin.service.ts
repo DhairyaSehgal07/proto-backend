@@ -1086,6 +1086,7 @@ export class StoreAdminService {
               floor: (bag as { floor?: string }).floor,
               row: (bag as { row?: string }).row,
               chamber: (bag as { chamber?: string }).chamber,
+              pricePerBag: (bag as { pricePerBag?: number }).pricePerBag ?? undefined,
             })),
           })),
         }));
@@ -1386,6 +1387,7 @@ export class StoreAdminService {
                   approxWeight: bag.approxWeight ?? undefined,
                   customMarka: (bag as { customMarka?: string }).customMarka ?? undefined,
                   locationId: bag.locationId,
+                  pricePerBag: (bag as { pricePerBag?: number }).pricePerBag ?? undefined,
                 })),
               })),
             });
@@ -1428,6 +1430,7 @@ export class StoreAdminService {
                     approxWeight: bag.approxWeight ?? undefined,
                     customMarka: (bag as { customMarka?: string }).customMarka ?? undefined,
                     locationId: bag.locationId,
+                    pricePerBag: (bag as { pricePerBag?: number }).pricePerBag ?? undefined,
                   })),
                 })),
               });
@@ -1899,6 +1902,7 @@ export class StoreAdminService {
               floor: (bag as { floor?: string }).floor,
               row: (bag as { row?: string }).row,
               chamber: (bag as { chamber?: string }).chamber,
+              pricePerBag: (bag as { pricePerBag?: number }).pricePerBag ?? undefined,
             })),
           })),
         }));
@@ -2159,6 +2163,7 @@ export class StoreAdminService {
                   approxWeight: bag.approxWeight ?? undefined,
                   customMarka: (bag as { customMarka?: string }).customMarka ?? undefined,
                   locationId: bag.locationId,
+                  pricePerBag: (bag as { pricePerBag?: number }).pricePerBag ?? undefined,
                 })),
               })),
             });
@@ -2199,6 +2204,7 @@ export class StoreAdminService {
                     approxWeight: bag.approxWeight ?? undefined,
                     customMarka: (bag as { customMarka?: string }).customMarka ?? undefined,
                     locationId: bag.locationId,
+                    pricePerBag: (bag as { pricePerBag?: number }).pricePerBag ?? undefined,
                   })),
                 })),
               });

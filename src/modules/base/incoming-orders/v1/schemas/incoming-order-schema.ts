@@ -23,6 +23,7 @@ export const bagSizeSchema = z.object({
   floor: z.string().min(1, 'Floor is required'),
   row: z.string().min(1, 'Row is required'),
   chamber: z.string().min(1, 'Chamber is required'),
+  pricePerBag: z.coerce.number().min(0, 'pricePerBag must be non-negative').optional(),
 });
 
 /**
