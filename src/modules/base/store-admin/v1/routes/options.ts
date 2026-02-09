@@ -721,6 +721,7 @@ export const getFarmersOptions = {
                 address: { type: 'string' },
                 accountNumber: { type: 'number' },
                 isActive: { type: 'boolean' },
+                totalRentFromOrders: { type: 'number', nullable: true },
                 paymentHistory: {
                   type: 'array',
                   items: {
@@ -1061,6 +1062,7 @@ export const getFarmerOrdersOptions = {
                 gatePassNumber: { type: 'number' },
                 remarks: { type: 'string', nullable: true },
                 currentStockAtThatTime: { type: 'number', nullable: true },
+                storeCharge: { type: 'number', nullable: true },
                 createdAt: { type: 'string', format: 'date-time' },
                 updatedAt: { type: 'string', format: 'date-time' },
                 farmerStorageLink: {
