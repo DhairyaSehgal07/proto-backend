@@ -6,6 +6,7 @@ import cookie from '@fastify/cookie';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import prismaPlugin from './plugins/prisma.js';
+import { formatFastifyValidation } from './core/validation.js';
 import { config } from 'dotenv';
 import coldStorageRoutes from '@/modules/base/cold-storage/v1/routes/cold-storage.routes.js';
 import storeAdminRoutes from './modules/base/store-admin/v1/routes/store-admin.routes.js';
@@ -88,13 +89,23 @@ export const buildApp = async (): Promise<FastifyInstance> => {
 
   // Global error handler
   fastify.setErrorHandler((error, request, reply) => {
-    if ((error as any).validation) {
+    const validation = (
+      error as {
+        validation?: Array<{
+          instancePath?: string;
+          message?: string;
+          params?: Record<string, unknown>;
+        }>;
+      }
+    ).validation;
+    if (validation && Array.isArray(validation) && validation.length > 0) {
+      const { message, details } = formatFastifyValidation(validation);
       reply.code(400).send({
         success: false,
         error: {
           code: 'VALIDATION_ERROR',
-          message: error.message,
-          details: (error as any).validation,
+          message,
+          details,
         },
       });
       return;
