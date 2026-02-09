@@ -1500,6 +1500,20 @@ export const coldStorageAnalyticsOptions = {
                   },
                 },
               },
+              farmerSummary: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    farmerStorageLinkId: { type: 'string' },
+                    farmerName: { type: 'string' },
+                    totalIncomingOrders: { type: 'number' },
+                    totalOutgoingOrders: { type: 'number' },
+                    rentPaid: { type: 'number' },
+                    rentDue: { type: 'number' },
+                  },
+                },
+              },
             },
           },
         },
