@@ -110,7 +110,7 @@ export class PaymentHistoryController {
           date: body.date,
           amount: body.amount,
           type: body.type,
-          remarks: body.remarks,
+          remarks: body.remarks ?? '',
           createdBy: body.createdBy,
           voucherId: body.voucherId,
         },

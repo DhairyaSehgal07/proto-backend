@@ -119,7 +119,7 @@ export class PaymentHistoryDAO {
           date: data.date,
           amount: data.amount,
           type: data.type,
-          remarks: data.remarks,
+          remarks: data.remarks ?? '',
           createdBy: data.createdBy ?? null,
           voucherId: data.voucherId ?? null,
         },

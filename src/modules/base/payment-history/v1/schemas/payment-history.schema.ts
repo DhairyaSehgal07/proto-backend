@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const PaymentTypeEnum = z.enum(['RENT', 'PAYMENT']);
+export const PaymentTypeEnum = z.enum(['RENT', 'PAYMENT', 'EXPENSE']);
 
 /**
  * CREATE PaymentHistory schema
@@ -10,7 +10,7 @@ export const createPaymentHistorySchema = z.object({
   date: z.coerce.date(),
   amount: z.number().positive('Amount must be positive'),
   type: PaymentTypeEnum,
-  remarks: z.string().min(1, 'Remarks are required'),
+  remarks: z.string().optional(),
   createdBy: z.string().length(24, 'Invalid MongoDB ObjectId').optional().nullable(),
   voucherId: z.string().length(24, 'Invalid MongoDB ObjectId').optional().nullable(),
 });
@@ -22,7 +22,7 @@ export const updatePaymentHistorySchema = z.object({
   date: z.coerce.date().optional(),
   amount: z.number().positive('Amount must be positive').optional(),
   type: PaymentTypeEnum.optional(),
-  remarks: z.string().min(1, 'Remarks are required').optional(),
+  remarks: z.string().optional(),
   voucherId: z.string().length(24, 'Invalid MongoDB ObjectId').optional().nullable(),
 });
 

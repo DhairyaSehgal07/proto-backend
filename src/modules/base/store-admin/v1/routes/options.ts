@@ -1511,6 +1511,30 @@ export const coldStorageAnalyticsOptions = {
                     totalOutgoingOrders: { type: 'number' },
                     rentPaid: { type: 'number' },
                     rentDue: { type: 'number' },
+                    incomingBreakdown: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          commodity: { type: 'string' },
+                          variety: { type: 'string' },
+                          bagSize: { type: 'string' },
+                          quantity: { type: 'number' },
+                        },
+                      },
+                    },
+                    outgoingBreakdown: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          commodity: { type: 'string' },
+                          variety: { type: 'string' },
+                          bagSize: { type: 'string' },
+                          quantity: { type: 'number' },
+                        },
+                      },
+                    },
                   },
                 },
               },

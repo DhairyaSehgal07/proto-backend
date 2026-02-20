@@ -51,6 +51,7 @@ enum Commodity {
 enum PaymentType {
   RENT
   PAYMENT
+  EXPENSE
 }
 
 // -------------------- MODELS --------------------
