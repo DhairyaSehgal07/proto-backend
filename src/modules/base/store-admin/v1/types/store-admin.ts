@@ -238,7 +238,7 @@ export interface PaymentHistoryItem {
   id: string;
   date: Date;
   amount: number;
-  type: 'RENT' | 'PAYMENT';
+  type: 'RENT' | 'PAYMENT' | 'EXPENSE';
   remarks: string;
   createdBy: string | null;
   voucherId: string | null;

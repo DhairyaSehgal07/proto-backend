@@ -2363,6 +2363,18 @@ export class StoreAdminService {
       totalOutgoingOrders: number;
       rentPaid: number;
       rentDue: number;
+      incomingBreakdown: Array<{
+        commodity: string;
+        variety: string;
+        bagSize: string;
+        quantity: number;
+      }>;
+      outgoingBreakdown: Array<{
+        commodity: string;
+        variety: string;
+        bagSize: string;
+        quantity: number;
+      }>;
     }>;
   }> {
     const { coldStorageId, dateFrom, dateTo, commodity, farmerId, locationId } = options;
@@ -2802,6 +2814,71 @@ export class StoreAdminService {
     });
 
     const STORE_CHARGE_REMARKS = 'Store charge for incoming order';
+
+    // Aggregate incoming breakdown per farmer: commodity, variety, bagSize, quantity
+    const incomingBreakdownByLink = new Map<
+      string,
+      Array<{ commodity: string; variety: string; bagSize: string; quantity: number }>
+    >();
+    for (const order of incomingOrders) {
+      const linkId = order.farmerStorageLinkId;
+      const orderCommodity = order.commodity ?? '';
+      for (const variety of order.varieties || []) {
+        for (const bagSize of variety.bagSizes || []) {
+          const qty = bagSize.quantityInit ?? 0;
+          if (qty <= 0) continue;
+          const list = incomingBreakdownByLink.get(linkId) ?? [];
+          const existing = list.find(
+            (x) =>
+              x.commodity === orderCommodity &&
+              x.variety === variety.name &&
+              x.bagSize === bagSize.name
+          );
+          if (existing) existing.quantity += qty;
+          else
+            list.push({
+              commodity: orderCommodity,
+              variety: variety.name,
+              bagSize: bagSize.name,
+              quantity: qty,
+            });
+          incomingBreakdownByLink.set(linkId, list);
+        }
+      }
+    }
+
+    // Aggregate outgoing breakdown per farmer: commodity, variety, bagSize, quantity
+    const outgoingBreakdownByLink = new Map<
+      string,
+      Array<{ commodity: string; variety: string; bagSize: string; quantity: number }>
+    >();
+    for (const order of outgoingOrders) {
+      const linkId = order.farmerStorageLinkId;
+      const orderCommodity = order.commodity ?? '';
+      for (const variety of order.varieties || []) {
+        const varietyName = (variety as { name?: string }).name ?? '';
+        for (const bagSize of variety.bagSizes || []) {
+          const qty = (bagSize as { quantityRemoved?: number }).quantityRemoved ?? 0;
+          if (qty <= 0) continue;
+          const sizeName = (bagSize as { name?: string }).name ?? '';
+          const list = outgoingBreakdownByLink.get(linkId) ?? [];
+          const existing = list.find(
+            (x) =>
+              x.commodity === orderCommodity && x.variety === varietyName && x.bagSize === sizeName
+          );
+          if (existing) existing.quantity += qty;
+          else
+            list.push({
+              commodity: orderCommodity,
+              variety: varietyName,
+              bagSize: sizeName,
+              quantity: qty,
+            });
+          outgoingBreakdownByLink.set(linkId, list);
+        }
+      }
+    }
+
     const farmerSummary = links
       .map((link) => {
         const rentPaid = link.paymentHistory
@@ -2815,6 +2892,8 @@ export class StoreAdminService {
           totalOutgoingOrders: outgoingCountByLink.get(link.id) ?? 0,
           rentPaid,
           rentDue,
+          incomingBreakdown: incomingBreakdownByLink.get(link.id) ?? [],
+          outgoingBreakdown: outgoingBreakdownByLink.get(link.id) ?? [],
         };
       })
       .sort((a, b) => a.farmerName.localeCompare(b.farmerName));

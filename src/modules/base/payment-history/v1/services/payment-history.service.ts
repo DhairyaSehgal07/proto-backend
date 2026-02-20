@@ -47,7 +47,7 @@ export class PaymentHistoryService {
     page?: number;
     limit?: number;
     farmerStorageLinkId?: string;
-    type?: 'RENT' | 'PAYMENT';
+    type?: 'RENT' | 'PAYMENT' | 'EXPENSE';
     dateFrom?: Date;
     dateTo?: Date;
     coldStorageId?: string; // For filtering by cold storage
@@ -73,7 +73,9 @@ export class PaymentHistoryService {
         where.date.gte = options.dateFrom;
       }
       if (options.dateTo) {
-        where.date.lte = options.dateTo;
+        const endOfDay = new Date(options.dateTo);
+        endOfDay.setHours(23, 59, 59, 999);
+        where.date.lte = endOfDay;
       }
     }
 
@@ -196,7 +198,7 @@ export class PaymentHistoryService {
     farmerStorageLinkId: string;
     date: Date;
     amount: number;
-    type: 'RENT' | 'PAYMENT';
+    type: 'RENT' | 'PAYMENT' | 'EXPENSE';
     remarks: string;
     createdBy: string | null;
     voucherId: string | null;
@@ -225,7 +227,7 @@ export class PaymentHistoryService {
     farmerStorageLinkId: string;
     date: Date;
     amount: number;
-    type: 'RENT' | 'PAYMENT';
+    type: 'RENT' | 'PAYMENT' | 'EXPENSE';
     remarks: string;
     createdBy: string | null;
     voucherId: string | null;

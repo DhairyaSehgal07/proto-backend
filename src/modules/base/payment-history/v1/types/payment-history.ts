@@ -12,8 +12,8 @@ export interface CreatePaymentHistoryRequest {
   farmerStorageLinkId: string;
   date: Date;
   amount: number;
-  type: 'RENT' | 'PAYMENT';
-  remarks: string;
+  type: 'RENT' | 'PAYMENT' | 'EXPENSE';
+  remarks?: string;
   createdBy?: string | null;
   voucherId?: string | null;
 }
@@ -24,7 +24,7 @@ export interface CreatePaymentHistoryRequest {
 export interface UpdatePaymentHistoryRequest {
   date?: Date;
   amount?: number;
-  type?: 'RENT' | 'PAYMENT';
+  type?: 'RENT' | 'PAYMENT' | 'EXPENSE';
   remarks?: string;
   voucherId?: string | null;
 }
@@ -37,7 +37,7 @@ export interface PaymentHistoryResponse {
   farmerStorageLinkId: string;
   date: Date;
   amount: number;
-  type: 'RENT' | 'PAYMENT';
+  type: 'RENT' | 'PAYMENT' | 'EXPENSE';
   remarks: string;
   createdBy: string | null;
   voucherId: string | null;

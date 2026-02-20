@@ -7,7 +7,7 @@ import type {
   VarietySnapshotInput,
   BagSizeSnapshotInput,
 } from '../types/outgoing-order.js';
-import type { Prisma } from '../../../../../../generated/prisma/client.js';
+import type { GatePassType, Prisma } from '../../../../../../generated/prisma/client.js';
 import {
   getLatestOrderCurrentStock,
   calculateQuantityRemovedFromVarieties,
@@ -294,15 +294,17 @@ export class OutgoingOrderService {
             );
           }
 
-          // Validate quantityBefore matches quantityCurr in incoming order
-          const incomingQuantityCurr = incomingBagSize.quantityCurr ?? 0;
-          if (Math.abs(incomingQuantityCurr - bagSize.quantityBefore) > 0.01) {
+          // Use server-authoritative current quantity from incoming order (allows multiple outgoings from same order)
+          const quantityBefore = incomingBagSize.quantityCurr ?? 0;
+
+          // Validate quantityRemoved does not exceed this incoming order's available quantity
+          if (bagSize.quantityRemoved > quantityBefore) {
             throw new OutgoingOrderValidationError(
-              `quantityBefore (${bagSize.quantityBefore}) doesn't match available quantity (${incomingQuantityCurr}) in incoming order ${bagSize.incomingOrderId}`
+              `Cannot remove ${bagSize.quantityRemoved} from incoming order ${bagSize.incomingOrderId}: only ${quantityBefore} available for ${bagSize.varietyName} ${bagSize.name}`
             );
           }
 
-          // Validate stock availability - check if quantityRemoved doesn't exceed what's available
+          // Validate stock availability (aggregate across all sources)
           const stockKey = `${bagSize.locationId}_${bagSize.varietyName}_${bagSize.name}`;
           const availableStock = stockMap.get(stockKey) || 0;
           if (bagSize.quantityRemoved > availableStock) {
@@ -311,15 +313,17 @@ export class OutgoingOrderService {
             );
           }
 
-          // Return bagSize snapshot structure
+          const quantityAfter = quantityBefore - bagSize.quantityRemoved;
+
+          // Return bagSize snapshot structure (server-computed quantityBefore and quantityAfter)
           return {
             name: bagSize.name,
             locationId: bagSize.locationId,
             incomingOrderId: bagSize.incomingOrderId,
             varietyName: bagSize.varietyName,
-            quantityBefore: bagSize.quantityBefore,
+            quantityBefore,
             quantityRemoved: bagSize.quantityRemoved,
-            quantityAfter: bagSize.quantityAfter,
+            quantityAfter,
             approxWeight: bagSize.approxWeight,
           } as BagSizeSnapshotInput;
         });
@@ -833,10 +837,10 @@ export class OutgoingOrderService {
               );
             }
 
-            const incomingQuantityCurr = incomingBagSize.quantityCurr ?? 0;
-            if (Math.abs(incomingQuantityCurr - bagSize.quantityBefore) > 0.01) {
+            const quantityBefore = incomingBagSize.quantityCurr ?? 0;
+            if (bagSize.quantityRemoved > quantityBefore) {
               throw new OutgoingOrderValidationError(
-                `quantityBefore (${bagSize.quantityBefore}) doesn't match available quantity (${incomingQuantityCurr}) in incoming order ${bagSize.incomingOrderId}`
+                `Cannot remove ${bagSize.quantityRemoved} from incoming order ${bagSize.incomingOrderId}: only ${quantityBefore} available for ${bagSize.varietyName} ${bagSize.name}`
               );
             }
 
@@ -848,14 +852,16 @@ export class OutgoingOrderService {
               );
             }
 
+            const quantityAfter = quantityBefore - bagSize.quantityRemoved;
+
             return {
               name: bagSize.name,
               locationId: bagSize.locationId,
               incomingOrderId: bagSize.incomingOrderId,
               varietyName: bagSize.varietyName,
-              quantityBefore: bagSize.quantityBefore,
+              quantityBefore,
               quantityRemoved: bagSize.quantityRemoved,
-              quantityAfter: bagSize.quantityAfter,
+              quantityAfter,
               approxWeight: bagSize.approxWeight,
             } as BagSizeSnapshotInput;
           });
@@ -1136,11 +1142,11 @@ export class OutgoingOrderService {
     };
 
     if (options?.commodity) {
-      where.commodity = options.commodity as any;
+      where.commodity = options.commodity;
     }
 
     if (options?.gatePassType) {
-      where.gatePassType = options.gatePassType as any;
+      where.gatePassType = options.gatePassType as GatePassType;
     }
 
     if (options?.search) {
@@ -1223,7 +1229,7 @@ export class OutgoingOrderService {
     };
 
     if (options?.commodity) {
-      where.commodity = options.commodity as any;
+      where.commodity = options.commodity;
     }
 
     const [orders, count] = await Promise.all([
@@ -1432,16 +1438,29 @@ export class OutgoingOrderService {
   }): OutgoingOrderResponse {
     // Convert null approxWeight to undefined for type compatibility
     // Include floor, row, chamber if they exist (from enrichment)
+    interface BagSizeInput {
+      name: string;
+      locationId: string;
+      incomingOrderId?: string | null;
+      varietyName?: string;
+      quantityBefore?: number;
+      quantityRemoved?: number;
+      quantityAfter?: number;
+      approxWeight?: number | null;
+      floor?: string;
+      row?: string;
+      chamber?: string;
+    }
     const processedVarieties: VarietySnapshotInput[] = (order.varieties || []).map((variety) => ({
       name: variety.name,
-      bagSizes: variety.bagSizes.map((bagSize: any) => ({
+      bagSizes: variety.bagSizes.map((bagSize: BagSizeInput) => ({
         name: bagSize.name,
         locationId: bagSize.locationId,
-        incomingOrderId: bagSize.incomingOrderId,
-        varietyName: bagSize.varietyName,
-        quantityBefore: bagSize.quantityBefore,
-        quantityRemoved: bagSize.quantityRemoved,
-        quantityAfter: bagSize.quantityAfter,
+        incomingOrderId: bagSize.incomingOrderId ?? '',
+        varietyName: bagSize.varietyName ?? '',
+        quantityBefore: bagSize.quantityBefore ?? 0,
+        quantityRemoved: bagSize.quantityRemoved ?? 0,
+        quantityAfter: bagSize.quantityAfter ?? 0,
         approxWeight: bagSize.approxWeight ?? undefined,
         ...(bagSize.floor && { floor: bagSize.floor }),
         ...(bagSize.row && { row: bagSize.row }),
