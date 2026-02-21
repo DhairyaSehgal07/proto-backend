@@ -367,7 +367,7 @@ export class StoreAdminController {
         return;
       }
 
-      const { type, commodity, search, sortBy, page, limit } = request.query;
+      const { type, commodity, search, sortBy, page, limit, dateFrom, dateTo } = request.query;
 
       const result = await this.service.getDaybook(request.admin.coldStorageId, {
         type,
@@ -376,6 +376,8 @@ export class StoreAdminController {
         sortBy,
         page,
         limit,
+        dateFrom,
+        dateTo,
       });
 
       reply.code(200).send({

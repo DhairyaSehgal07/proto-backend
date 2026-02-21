@@ -768,6 +768,8 @@ export class StoreAdminService {
       sortBy?: 'latest' | 'oldest';
       page?: number;
       limit?: number;
+      dateFrom?: string;
+      dateTo?: string;
     }
   ): Promise<DaybookResponse> {
     const type = options?.type ?? 'all';
@@ -775,6 +777,10 @@ export class StoreAdminService {
     const limit = options?.limit ?? 10;
     const sortBy = options?.sortBy ?? 'latest';
     const orderBy = sortBy === 'latest' ? 'desc' : 'asc';
+
+    const gte = options?.dateFrom ? new Date(options.dateFrom) : undefined;
+    const lte = options?.dateTo ? new Date(options.dateTo) : undefined;
+    if (lte) lte.setHours(23, 59, 59, 999);
 
     // Build common where clause
     const buildWhere = () => {
@@ -790,6 +796,20 @@ export class StoreAdminService {
         const gatePassNumber = parseInt(options.search, 10);
         if (!isNaN(gatePassNumber)) {
           where.gatePassNumber = gatePassNumber;
+        }
+      }
+
+      if (gte || lte) {
+        const dateRangeCondition =
+          gte && lte
+            ? { OR: [{ date: { gte, lte } }, { date: null, createdAt: { gte, lte } }] }
+            : gte
+              ? { OR: [{ date: { gte } }, { date: null, createdAt: { gte } }] }
+              : lte
+                ? { OR: [{ date: { lte } }, { date: null, createdAt: { lte } }] }
+                : undefined;
+        if (dateRangeCondition) {
+          (where as any).AND = [...((where as any).AND ?? []), dateRangeCondition];
         }
       }
 

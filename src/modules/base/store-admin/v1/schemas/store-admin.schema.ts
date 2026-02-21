@@ -99,6 +99,16 @@ export const daybookQuerySchema = z.object({
   sortBy: z.enum(['latest', 'oldest']).optional().default('latest'),
   page: z.coerce.number().min(1).optional().default(1),
   limit: z.coerce.number().min(1).max(100).optional().default(10),
+  dateFrom: z
+    .string()
+    .datetime('Invalid date format. Use ISO 8601 format (e.g., 2024-01-01T00:00:00Z)')
+    .optional()
+    .describe('Start date for filtering orders (inclusive)'),
+  dateTo: z
+    .string()
+    .datetime('Invalid date format. Use ISO 8601 format (e.g., 2024-12-31T23:59:59Z)')
+    .optional()
+    .describe('End date for filtering orders (inclusive)'),
 });
 
 /**

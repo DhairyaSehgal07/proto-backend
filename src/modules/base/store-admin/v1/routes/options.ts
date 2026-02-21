@@ -542,6 +542,16 @@ export const daybookOptions = {
           default: 10,
           description: 'Items per page',
         },
+        dateFrom: {
+          type: 'string',
+          format: 'date-time',
+          description: 'Start date for filtering orders (ISO 8601)',
+        },
+        dateTo: {
+          type: 'string',
+          format: 'date-time',
+          description: 'End date for filtering orders (ISO 8601)',
+        },
       },
     },
     response: {
