@@ -36,6 +36,11 @@ interface OutgoingVariety {
   }>;
 }
 
+/** Normalized key for stock map so lookup matches regardless of case/trim (e.g. "General" vs "general"). */
+function stockMapKey(locationId: string, varietyName: string, bagSizeName: string): string {
+  return `${locationId}_${String(varietyName).trim().toLowerCase()}_${String(bagSizeName).trim().toLowerCase()}`;
+}
+
 /**
  * Custom error classes for business logic
  */
@@ -200,7 +205,8 @@ export class OutgoingOrderService {
         },
       });
 
-      // Add quantities from incoming orders
+      // Sum current stock from incoming orders only. quantityCurr is already updated when
+      // outgoings are created, so we do NOT subtract from existing outgoings (that would double-count).
       for (const order of allIncomingOrdersForCommodity) {
         if (!order.varieties || !Array.isArray(order.varieties) || order.varieties.length === 0) {
           continue; // Skip null vouchers
@@ -213,40 +219,9 @@ export class OutgoingOrderService {
               const locationId = bagSize.locationId;
               const bagSizeName = bagSize.name;
               const quantity = bagSize.quantityCurr || 0;
-              const key = `${locationId}_${varietyName}_${bagSizeName}`;
+              const key = stockMapKey(locationId, varietyName, bagSizeName);
               const currentStock = stockMap.get(key) || 0;
               stockMap.set(key, currentStock + quantity);
-            }
-          }
-        }
-      }
-
-      // Subtract quantities from existing outgoing orders
-      const allOutgoingOrdersForCommodity = await this.fastify.prisma.outgoingOrder.findMany({
-        where: {
-          coldStorageId,
-          commodity: data.commodity,
-        },
-        select: {
-          varieties: true,
-        },
-      });
-
-      for (const order of allOutgoingOrdersForCommodity) {
-        if (!order.varieties || !Array.isArray(order.varieties) || order.varieties.length === 0) {
-          continue; // Skip null vouchers
-        }
-
-        for (const variety of order.varieties as OutgoingVariety[]) {
-          if (variety.bagSizes && Array.isArray(variety.bagSizes)) {
-            for (const bagSize of variety.bagSizes) {
-              const locationId = bagSize.locationId;
-              const varietyNameFromSnapshot = bagSize.varietyName;
-              const bagSizeName = bagSize.name;
-              const quantityRemoved = bagSize.quantityRemoved || 0;
-              const key = `${locationId}_${varietyNameFromSnapshot}_${bagSizeName}`;
-              const currentStock = stockMap.get(key) || 0;
-              stockMap.set(key, Math.max(0, currentStock - quantityRemoved));
             }
           }
         }
@@ -304,8 +279,8 @@ export class OutgoingOrderService {
             );
           }
 
-          // Validate stock availability (aggregate across all sources)
-          const stockKey = `${bagSize.locationId}_${bagSize.varietyName}_${bagSize.name}`;
+          // Validate stock availability (aggregate across all sources; key normalized for case/trim)
+          const stockKey = stockMapKey(bagSize.locationId, bagSize.varietyName, bagSize.name);
           const availableStock = stockMap.get(stockKey) || 0;
           if (bagSize.quantityRemoved > availableStock) {
             throw new OutgoingOrderValidationError(
@@ -758,7 +733,7 @@ export class OutgoingOrderService {
                 const locationId = bagSize.locationId;
                 const bagSizeName = bagSize.name;
                 const quantity = bagSize.quantityCurr || 0;
-                const key = `${locationId}_${varietyName}_${bagSizeName}`;
+                const key = stockMapKey(locationId, varietyName, bagSizeName);
                 const currentStock = stockMap.get(key) || 0;
                 stockMap.set(key, currentStock + quantity);
               }
@@ -766,33 +741,20 @@ export class OutgoingOrderService {
           }
         }
 
-        // Subtract quantities from existing outgoing orders (excluding the one being updated)
-        const allOutgoingOrdersForCommodity = await this.fastify.prisma.outgoingOrder.findMany({
-          where: {
-            coldStorageId,
-            commodity,
-            id: { not: id }, // Exclude the order being updated
-          },
-          select: {
-            varieties: true,
-          },
+        // For update: add back the quantities that the order being edited currently has (so we don't
+        // count them as "taken" when validating the new quantities)
+        const orderBeingUpdated = await this.fastify.prisma.outgoingOrder.findUnique({
+          where: { id },
+          select: { varieties: true },
         });
-
-        for (const order of allOutgoingOrdersForCommodity) {
-          if (!order.varieties || !Array.isArray(order.varieties) || order.varieties.length === 0) {
-            continue;
-          }
-
-          for (const variety of order.varieties as OutgoingVariety[]) {
+        if (orderBeingUpdated?.varieties && Array.isArray(orderBeingUpdated.varieties)) {
+          for (const variety of orderBeingUpdated.varieties as OutgoingVariety[]) {
             if (variety.bagSizes && Array.isArray(variety.bagSizes)) {
               for (const bagSize of variety.bagSizes) {
-                const locationId = bagSize.locationId;
-                const varietyNameFromSnapshot = bagSize.varietyName;
-                const bagSizeName = bagSize.name;
-                const quantityRemoved = bagSize.quantityRemoved || 0;
-                const key = `${locationId}_${varietyNameFromSnapshot}_${bagSizeName}`;
+                const key = stockMapKey(bagSize.locationId, bagSize.varietyName, bagSize.name);
                 const currentStock = stockMap.get(key) || 0;
-                stockMap.set(key, Math.max(0, currentStock - quantityRemoved));
+                const addBack = bagSize.quantityRemoved || 0;
+                stockMap.set(key, currentStock + addBack);
               }
             }
           }
@@ -844,7 +806,7 @@ export class OutgoingOrderService {
               );
             }
 
-            const stockKey = `${bagSize.locationId}_${bagSize.varietyName}_${bagSize.name}`;
+            const stockKey = stockMapKey(bagSize.locationId, bagSize.varietyName, bagSize.name);
             const availableStock = stockMap.get(stockKey) || 0;
             if (bagSize.quantityRemoved > availableStock) {
               throw new OutgoingOrderValidationError(
